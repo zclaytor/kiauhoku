@@ -79,9 +79,9 @@ of 0.01\*Msun.
 ## Basic Usage
 
 Once you have everything running, try doing this:  
-    from kiauhoku import load_interpolator  
-    grid = load_interpolator(["Age(Gyr)", "Prot(days)", "L/Lsun"])  
-    grid.get_star(1, 0, 0, age=4.5)  
+   `from kiauhoku import load_interpolator`  
+   `grid = load_interpolator(["Age(Gyr)", "Prot(days)", "L/Lsun"])`  
+   `grid.get_star(1, 0, 0, age=4.5)`  
 
 If it works, you should get something close to the sun. The arguments to 
 get_star are mass (in solar units), metallicity, and alpha-abundance. 
