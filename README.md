@@ -2,15 +2,15 @@
 
 Python utilities for stellar model grid interpolation
 
-(C) [Zachary R. Claytor][zclaytor]
-Institute for Astronomy
-University of Hawaiʻi
-2019 July 1
+(C) [Zachary R. Claytor][zclaytor]  
+Institute for Astronomy  
+University of Hawaiʻi  
+2019 July 1  
 
-Kīauhōkū
-From Hawaiian:
-1. vt. To sense the span of a star's existence (i.e., its age).
-2. n. The speed of a star (in this case, its rotational speed).
+Kīauhōkū  
+From Hawaiian:  
+1. vt. To sense the span of a star's existence (i.e., its age).  
+2. n. The speed of a star (in this case, its rotational speed).  
 
 
 Thanks for testing this software! 
