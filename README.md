@@ -85,8 +85,7 @@ Once you have everything running, try doing this:
 
 If it works, you should get something close to the sun. The arguments to 
 get_star are mass (in solar units), metallicity, and alpha-abundance. 
-See the documentation in kiauhoku.py for more details. For a complete list
-of the labels available to you, see raw_tracks/column_labels_key.txt.
+See the documentation in kiauhoku.py for more details.
 
 Kīauhōkū comes with MCMC functionality through emcee-3. See the docs for
 kiauhoku.Grid.mcmc for more details.
