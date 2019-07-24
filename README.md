@@ -21,14 +21,14 @@ Kīauhōkū comes packaged with the model grid used in Claytor et al. (2019,
 in prep), which was generated using YREC with the magnetic braking law
 of van Saders et al. (2013). See literature for details.
 
-Kīauhōkū requires the use of Python 3 and uses the following Python packages:
-0. numpy
-0. scipy
-0. pandas
-0. matplotlib
-0. emcee-3 * See Dan Foreman-Mackey's webpage to get the latest version
-0. tqdm
-0. multiprocessing
+Kīauhōkū requires the use of Python 3 and uses the following Python packages:  
+0. numpy  
+0. scipy  
+0. pandas  
+0. matplotlib  
+0. emcee-3 * See Dan Foreman-Mackey's webpage to get the latest version  
+0. tqdm  
+0. multiprocessing  
 
 
 ## Space Requirements
