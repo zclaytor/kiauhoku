@@ -22,13 +22,13 @@ in prep), which was generated using YREC with the magnetic braking law
 of van Saders et al. (2013). See literature for details.
 
 Kīauhōkū requires the use of Python 3 and uses the following Python packages:  
-0. numpy  
-0. scipy  
-0. pandas  
-0. matplotlib  
-0. emcee-3 * See Dan Foreman-Mackey's webpage to get the latest version  
-0. tqdm  
-0. multiprocessing  
+- numpy  
+- scipy  
+- pandas  
+- matplotlib  
+- emcee-3 * See Dan Foreman-Mackey's webpage to get the latest version  
+- tqdm  
+- multiprocessing  
 
 
 ## Space Requirements
@@ -56,9 +56,9 @@ We start with output evolution tracks from your favorite stellar modeling
 software. For YREC, these are the \*.out files. Each \*.out file has, for one
 specific initial metallicity and alpha-abundance, a series of evolution tracks 
 for a range of initial masses. The grid included with kiauhoku has eight \*.out
-files, corresponding to 
-[M/H] ~ [-1.0, -0.5, 0.0, 0.5] and
-[alpha/M] ~ [0.0, 0.4].
+files, corresponding to  
+[M/H] ~ [-1.0, -0.5, 0.0, 0.5] and  
+[alpha/M] ~ [0.0, 0.4].  
 Each file contains 171 evolution tracks for 0.30 <= M/Msun <= 2.00 in steps
 of 0.01\*Msun.
 
@@ -94,25 +94,25 @@ kiauhoku.Grid.mcmc for more details.
 
 ## Contents
 
-0. model_grid_utils.py
-   Contains methods for loading, interacting with, and pickling the raw models
-   from their source files.
+- model_grid_utils.py
+  Contains methods for loading, interacting with, and pickling the raw models
+  from their source files.
 
-0. eep_functions.py
-   Contains methods for condensing the raw evolution tracks to EEP basis. EEPs
-   can be defined by the user using methods contained here. Also has some
-   plotting/testing methods.
+- eep_functions.py
+  Contains methods for condensing the raw evolution tracks to EEP basis. EEPs
+  can be defined by the user using methods contained here. Also has some
+  plotting/testing methods.
 
-0. config.py
-   Contains path variables for the locations of the raw evolution track files,
-   EEP-based track files, and interpolator file.
-   Also contains definitions of model grid boundaries and some indexing variables
-   for other methods to use.
+- config.py
+  Contains path variables for the locations of the raw evolution track files,
+  EEP-based track files, and interpolator file.
+  Also contains definitions of model grid boundaries and some indexing variables
+  for other methods to use.
 
-0. kiauhoku.py
-   Contains the Grid class, which is used to hold the interpolator objects. The
-   Grid object has methods for using MCMC to take samples from the model grid.
-   
+- kiauhoku.py
+  Contains the Grid class, which is used to hold the interpolator objects. The
+  Grid object has methods for using MCMC to take samples from the model grid.
+  
    
 [kiauhoku github]: https://github.com/zclaytor/kiauhoku
 [zclaytor]: https://zclaytor.github.io
