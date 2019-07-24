@@ -2,9 +2,9 @@
 
 Python utilities for stellar model grid interpolation
 
-(C) [Zachary R. Claytor][zclaytor]
-Institute for Astronomy
-University of Hawaiʻi
+(C) [Zachary R. Claytor][zclaytor] <\br>
+Institute for Astronomy <\br>
+University of Hawaiʻi <\br>
 2019 July 1
 
 Kīauhōkū
