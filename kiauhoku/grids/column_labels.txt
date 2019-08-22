@@ -1,0 +1,35 @@
+#Track Index                 
+#Model Index                 
+Age(Gyr)          
+L/Lsun            
+R/Rsun            
+Log Teff(K)       
+Mcz(Msun)         
+Rcz(Rsun)         
+#Xcen              
+Itot(cgs)         
+Icz(cgs)          
+Tau(cz)(sec)      
+He Core(Msun)     
+Patm(cgs)         
+Mass(Msun)        
+Prot(days)        
+Icore(cgs)        
+Omega(core)       
+Omega(env)        
+Jtot(cgs)         
+Jcore(cgs)        
+Jenv(cgs)         
+logg              
+logT(cen)         
+logrho(cen)       
+Xcen              
+Ycen              
+XC12cen           
+Xsurf             
+Ysurf             
+Z/X(surf)         
+H lum (Lsun)      
+He lum (Lsun)     
+#dummyGamma        
+#dummyCcore        
