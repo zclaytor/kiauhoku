@@ -1,6 +1,7 @@
 # [Kīauhōkū][kiauhoku github]
 
-Python utilities for stellar model grid interpolation
+Python utilities for stellar model grid interpolation.
+
 NOTE: I am still working on getting the model grid files available to download online. For now, if you'd like access to the grids, send me an email. Thanks!
 
 (C) [Zachary R. Claytor][zclaytor]  
