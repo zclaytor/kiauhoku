@@ -16,20 +16,19 @@ From Hawaiian:
 
 This name was created in partnership with Dr. Larry Kimura and Bruce Torres Fischer, a student participant in *A Hua He Inoa*, a program to bring Hawaiian naming practices to new astronomical discoveries. We are grateful for their collaboration.
 
-Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, comes packaged with the model grid used in Claytor et al. (2019, in prep), which was generated using YREC with the magnetic braking law of van Saders et al. (2013). See literature for details.
+Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, comes packaged with the model grid used in [Claytor et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020ApJ...888...43C/abstract), which was generated using YREC with the magnetic braking law of van Saders et al. (2013). See literature for details.
 
-
-## Notes below this line are for the old version. I'm currently working on new notes.
 
 Kīauhōkū requires the use of Python 3 and uses the following Python packages:  
 - numpy  
 - scipy  
 - pandas  
 - matplotlib  
-- [emcee-3][emcee] * See Dan Foreman-Mackey's webpage to get the latest version  
-- tqdm  
-- multiprocessing  
+- tqdm
+- [emcee-3][emcee]  
+- [isochrones][https://github.com/timothydmorton/isochrones]
 
+## Notes below this line are for the old version. I'm currently working on new notes.
 
 ## Space Requirements
 The raw model files take up 4.1 GB of space. Once individually pickled and condensed to the EEP basis, the whole set of models + pickled interpolator takes up roughly 6.5 GB.
