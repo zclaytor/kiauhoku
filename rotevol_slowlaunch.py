@@ -9,12 +9,13 @@ from kiauhoku import stargrid
 
 name = 'slowlaunch'
 
-path_to_raw_grids = '/home/zach/Desktop/dev/' + name
+path_to_raw_grids = '/home/zach/Downloads/grids/' + name
 filelist = [f for f in os.listdir(path_to_raw_grids) if '.out' in f]
 
 # Assign labels used in eep conversion
 eep_params = dict(
     name = name,
+    age = 'Age(Gyr)',
     log_central_temp = 'logT(cen)',
     core_hydrogen_frac = 'Xcen',
     hydrogen_lum = 'H lum (Lsun)',
@@ -116,6 +117,9 @@ def all_from_rotevol(progress=True):
         df_list.append(from_rotevol(fpath))
 
     dfs = pd.concat(df_list)
+
+    if dfs.name is None:
+        dfs.name = name
 
     return dfs    
 

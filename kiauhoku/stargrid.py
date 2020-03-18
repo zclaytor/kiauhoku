@@ -20,9 +20,10 @@ class StarGrid(pd.DataFrame):
         # that we're inheriting the correct behavior
         super(StarGrid, self).__init__(*args, **kwargs)
 
-        self._metadata = ['name']
+        self._metadata = ['name', 'eep_params']
         # Set StarGrid name        
-        self.set_name(name)
+        self.name = name
+        self.eep_params = None
 
     # this method makes it so our methods return an instance
     # of StarGrid instead of a regular DataFrame
@@ -140,7 +141,9 @@ class StarGrid(pd.DataFrame):
         else:
             eep_frame = self._eep_interpolate(**eep_params)
 
-        eep_frame.set_name(self.name)
+        eep_frame.name = self.name
+        eep_frame.eep_params = eep_params
+
         return eep_frame
 
     def _eep_interpolate(self, **eep_params):
@@ -155,20 +158,20 @@ class StarGrid(pd.DataFrame):
         parameters are linearly interpolated at those points.
         '''
   
-        if not eep_params:
-            eep_params = load_eep_params(self.name)
+        if self.eep_params is None:
+            self.eep_params = load_eep_params(self.name)
 
-        i_eep = self._locate_primary_eeps(**eep_params)
+        i_eep = self._locate_primary_eeps()
         num_intervals = len(i_eep) - 1
         # In some cases, the raw models do not hit the ZAMS. In these cases,
         # return None.
         if num_intervals == 0:
             return
 
-        dist = self._Metric_Function(**eep_params) # compute metric distance along track
+        dist = self._Metric_Function() # compute metric distance along track
 
         primary_eep_dist = dist[i_eep]
-        eep_intervals = eep_params['intervals']
+        eep_intervals = self.eep_params['intervals']
         secondary_eep_dist = np.zeros(sum(eep_intervals[:num_intervals]) + len(i_eep))
 
         # Determine appropriate distance to each secondary EEP
@@ -196,12 +199,12 @@ class StarGrid(pd.DataFrame):
         return from_pandas(eep_track)
 
 
-    def _locate_primary_eeps(self, **eep_params):
+    def _locate_primary_eeps(self):
         '''
         Given a track, returns a list containing indices of Equivalent
         Evolutionary Phases (EEPs)
         '''
-        if not eep_params:
+        if not self.eep_params:
             eep_params = load_eep_params(self.name)
 
         # define a list of functions to iterate over
@@ -215,13 +218,13 @@ class StarGrid(pd.DataFrame):
         # get indices of EEPs
         i_eep = np.zeros(len(functions)+1, dtype=int)
         for i in range(1,len(i_eep)):
-            i_eep[i] = functions[i-1](i0=i_eep[i-1], **eep_params)
+            i_eep[i] = functions[i-1](i0=i_eep[i-1])
             if i_eep[i] == -1:
                 return i_eep[1:i]
         
         return i_eep[1:]
         
-    def get_PreMS(self, i0=0, logTc_crit=5.0, **kw):
+    def get_PreMS(self, i0=0, logTc_crit=5.0):
         '''
         The pre-main sequence EEP is the point where central temperature rises
         above a certain value (which must be lower than necessary for sustained
@@ -239,13 +242,13 @@ class StarGrid(pd.DataFrame):
         `i_PreMS`: (int) index of the first element in track[i0: "logT(cen)"]
         greater than logTc.    
         '''
-        log_central_temp = kw['log_central_temp']
+        log_central_temp = self.eep_params['log_central_temp']
         logTc_tr = self.loc[i0:, log_central_temp]
         i_PreMS = _first_true_index(logTc_tr >= logTc_crit)
         return i_PreMS
 
     def get_ZAMS(self, i0=10, ZAMS_pref=3, Xc_burned=0.001, 
-        Hlum_frac_max=0.999, **kw):
+        Hlum_frac_max=0.999):
         '''
         The Zero-Age Main Sequence EEP has three different implementations in 
         Dotter's code:
@@ -258,10 +261,10 @@ class StarGrid(pd.DataFrame):
 
         ZAMS3 is implemented by default.
         '''
-        core_hydrogen_frac = kw['core_hydrogen_frac']
-        hydrogen_lum = kw['hydrogen_lum']
-        lum = kw['lum']
-        logg = kw['logg']
+        core_hydrogen_frac = self.eep_params['core_hydrogen_frac']
+        hydrogen_lum = self.eep_params['hydrogen_lum']
+        lum = self.eep_params['lum']
+        logg = self.eep_params['logg']
 
         Xc_init = self.loc[0, core_hydrogen_frac]
         Xc_tr = self.loc[i0:, core_hydrogen_frac]
@@ -285,45 +288,45 @@ class StarGrid(pd.DataFrame):
         ZAMS3 = logg_tr.idxmax()
         return ZAMS3
 
-    def get_IorT_AMS(self, i0, Xmin, **kw):
+    def get_IorT_AMS(self, i0, Xmin):
         '''
         The Intermediate- and Terminal-Age Main Sequence (IAMS, TAMS) EEPs both use
         the core hydrogen mass fraction dropping below some critical amount.
         This function encapsulates the main part of the code, with the difference
         between IAMS and TAMS being the value of Xmin.
         '''
-        core_hydrogen_frac = kw['core_hydrogen_frac']
+        core_hydrogen_frac = self.eep_params['core_hydrogen_frac']
         Xc_tr = self.loc[i0:, core_hydrogen_frac]
         i_eep = _first_true_index(Xc_tr <= Xmin)
         return i_eep 
 
-    def get_EAMS(self, i0=12, Xmin=0.55, **kw):
+    def get_EAMS(self, i0=12, Xmin=0.55):
         '''
         Early-Age Main Sequence. Without this, the low-mass tracks do not
         reach an EEP past the ZAMS before 15 Gyr.
         '''
-        i_EAMS = self.get_IorT_AMS(i0, Xmin, **kw)
+        i_EAMS = self.get_IorT_AMS(i0, Xmin)
         return i_EAMS
 
-    def get_IAMS(self, i0=12, Xmin=0.3, **kw):
+    def get_IAMS(self, i0=12, Xmin=0.3):
         '''
         Intermediate-Age Main Sequence exists solely to ensure the convective
         hook is sufficiently sampled.
         Defined to be when the core hydrogen mass fraction drops below some
         critical value. Default: Xc <= 0.3
         '''
-        i_IAMS = self.get_IorT_AMS(i0, Xmin, **kw)
+        i_IAMS = self.get_IorT_AMS(i0, Xmin)
         return i_IAMS
 
-    def get_TAMS(self, i0=14, Xmin=1e-12, **kw):
+    def get_TAMS(self, i0=14, Xmin=1e-12):
         '''
         Terminal-Age Main Sequence, defined to be when the core hydrogen mass
         fraction drops below some critical value. Default: Xc <= 1e-12
         '''
-        i_TAMS = self.get_IorT_AMS(i0, Xmin, **kw)
+        i_TAMS = self.get_IorT_AMS(i0, Xmin)
         return i_TAMS
 
-    def get_RGBump(self, i0=None, **kw):
+    def get_RGBump(self, i0=None):
         '''
         The Red Giant Bump is an interruption in the increase in luminosity on the 
         Red Giant Branch. It occurs when the hydrogen-burning shell reaches the
@@ -350,8 +353,8 @@ class StarGrid(pd.DataFrame):
         for stars adjacent to these tracks in the grid, and the errors should be
         negligible (but I have not quantified them).
         '''
-        lum = kw['lum']
-        log_teff = kw['log_teff']
+        lum = self.eep_params['lum']
+        log_teff = self.eep_params['log_teff']
         N = len(self)
 
         lum_tr = self.loc[i0:, lum]
@@ -372,7 +375,7 @@ class StarGrid(pd.DataFrame):
             return -1
         return RGBump-1
 
-    def get_RGBTip(self, i0=None, **kw):
+    def get_RGBTip(self, i0=None):
         '''
         Red Giant Branch Tip
         Dotter describes the tip of the red giant branch (RGBTip) EEP as
@@ -384,9 +387,9 @@ class StarGrid(pd.DataFrame):
         the helium flash, so the RGBTip is unadvisable to use as an EEP.
         '''
 
-        core_helium_frac = kw['core_helium_frac']
-        lum = kw['lum']
-        log_teff = kw['log_teff']
+        core_helium_frac = self.eep_params['core_helium_frac']
+        lum = self.eep_params['lum']
+        log_teff = self.eep_params['log_teff']
 
         Ymin = self.loc[i0, core_helium_frac] - 1e-2
         Yc_tr = self.loc[i0:, core_helium_frac]
@@ -403,16 +406,16 @@ class StarGrid(pd.DataFrame):
         RGBTip = min(RGBTip1, RGBTip2)
         return RGBTip
     
-    def _Metric_Function(self, **kw):
+    def _Metric_Function(self):
         '''
         The Metric Function is used to calculate the distance along the evolution
         track. Traditionally, the Euclidean distance along the track on the
         H-R diagram has been used, but any positive-definite function will work.
         '''
-        return self._HRD_distance(**kw)
+        return self._HRD_distance()
 
 
-    def _HRD_distance(self, **kw):
+    def _HRD_distance(self):
         '''
         Distance along the H-R diagram, to be used in the Metric Function.
         Returns an array containing the distance from the beginning of the 
@@ -421,11 +424,11 @@ class StarGrid(pd.DataFrame):
         '''
 
         # Allow for scaling to make changes in Teff and L comparable
-        Tscale = kw['teff_scale']
-        Lscale = kw['lum_scale']
+        Tscale = self.eep_params['teff_scale']
+        Lscale = self.eep_params['lum_scale']
 
-        log_teff = kw['log_teff']
-        lum = kw['lum']
+        log_teff = self.eep_params['log_teff']
+        lum = self.eep_params['lum']
 
         logTeff = self[log_teff]
         logLum = np.log10(self[lum])
@@ -449,10 +452,9 @@ class StarGrid(pd.DataFrame):
         return lengths
 
 class StarGridInterpolator(DFInterpolator):
-    def __init__(self, *args, **kwargs):
-        super(StarGridInterpolator, self).__init__(*args, **kwargs)
+    def __init__(self, grid, eep_params):
+        super(StarGridInterpolator, self).__init__(grid)
 
-        grid = args[0]
         self.name = grid.name
         self.columns = grid.columns
 
@@ -461,10 +463,18 @@ class StarGridInterpolator(DFInterpolator):
         self.alpha_lim = grid.get_alpha_lim()
 
         self.max_eep = grid.index.to_frame().eep.max()
+        self.eep_params = eep_params
 
     def get_star_eep(self, mass, met, alpha, eep):
         star_values = self((mass, met, alpha, eep))
         return pd.Series(star_values, index=self.columns)
+
+    def get_star_age(self, mass, met, alpha, age):
+        track = self.get_track(mass, met, alpha)
+        labels = track.columns
+        interpf = interp1d(track[self.eep_params['age']], track.values.T)
+        star = pd.Series(interpf(age), labels)
+        return star
 
     def get_track(self, mass, met, alpha, eep=None):
         if eep is None:
@@ -540,7 +550,7 @@ def install_grid(script):
     print(f'Saving to {eep_save_path}')
     eeps.to_parquet(eep_save_path)
 
-    interp = StarGridInterpolator(eeps)
+    interp = StarGridInterpolator(eeps, eep_params)
     interp_save_path = os.path.join(path, 'interpolator.pkl')
     print(f'Saving interpolator to {interp_save_path}')
     interp.to_pickle(path=interp_save_path)
