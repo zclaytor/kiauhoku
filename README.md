@@ -26,7 +26,7 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 - matplotlib  
 - tqdm
 - pyarrow (or some package that supports parquet files)
-- [emcee-3][emcee]  
+- [emcee][emcee]  
 - [isochrones][isochrones]
 
 
