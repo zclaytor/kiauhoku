@@ -26,7 +26,7 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 - matplotlib  
 - tqdm
 - [emcee-3][emcee]  
-- [isochrones][https://github.com/timothydmorton/isochrones]
+- [isochrones](https://github.com/timothydmorton/isochrones)
 
 ## Notes below this line are for the old version. I'm currently working on new notes.
 
