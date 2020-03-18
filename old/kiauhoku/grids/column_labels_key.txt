@@ -1,0 +1,37 @@
+Column            Explanation
+--------------------------------------------------------------------------
+Track Index       Index of track in the file
+Model Index       Index of model in the evolution track
+Age(Gyr)          Age of star in gigayears
+L/Lsun            Stellar luminosity in solar units
+R/Rsun            Stellar radius in solar units
+Log Teff(K)       Logarithm of (Effective Temperature / kelvins)
+Mcz(Msun)         Mass contained in convection zone, in solar units
+Rcz(Rsun)         Radius of convection zone in solar units
+Xcen              Hydrogen mass fraction at star center
+Itot(cgs)         Total moment of inertia in CGS units
+Icz(cgs)          Convection zone moment of inertia, in CGS units
+Tau(cz)(sec)      Convection overturn timescale in seconds
+He Core(Msun)     Mass of helium contained in the core, in solar units
+Patm(cgs)         Photospheric pressure in CGS units
+Mass(Msun)        Stellar mass in solar units
+Prot(days)        Stellar rotation period in days
+Icore(cgs)        Core moment of inertia, in CGS units
+Omega(core)       Rotation speed of core, in radians per second
+Omega(env)        Rotation speed of envelope, in radians per second
+Jtot(cgs)         Total angular momentum in CGS units
+Jcore(cgs)        Core angular momentum in CGS units
+Jenv(cgs)         Envelope angular momentum in CGS units
+logg              Logarithm of (surface gravity / CGS units)
+logT(cen)         Logarithm of (Central Temperature / kelvins)
+logrho(cen)       Logarithm of (Central density / CGS units)
+Xcen              Central hydrogen mass fraction, Listed twice
+Ycen              Helium mass fraction at center
+XC12cen           Central mass fraction of carbon-12, not necessarily important
+Xsurf             Surface hydrogen mass fraction
+Ysurf             Surface helium mass fraction
+Z/X(surf)         Surface metallicity
+H lum (Lsun)      Hydrogen luminosity in solar units
+He lum (Lsun)     Helium luminosity in solar units
+dummyGamma        Adiabatic constant, set to ideal gas value, not necessarily important
+dummyCcore        not necessarily important
