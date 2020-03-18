@@ -18,6 +18,9 @@ This name was created in partnership with Dr. Larry Kimura and Bruce Torres Fisc
 
 Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, comes packaged with the model grid used in Claytor et al. (2019, in prep), which was generated using YREC with the magnetic braking law of van Saders et al. (2013). See literature for details.
 
+
+## Notes below this line are for the old version. I'm currently working on new notes.
+
 Kīauhōkū requires the use of Python 3 and uses the following Python packages:  
 - numpy  
 - scipy  
