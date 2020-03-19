@@ -7,7 +7,7 @@ NOTE: I am still working on getting the model grid files available to download o
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
 University of Hawaiʻi  
-2019 July 1  
+2020 March 18
 
 Kīauhōkū  
 From Hawaiian:  
