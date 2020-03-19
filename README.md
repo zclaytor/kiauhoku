@@ -40,8 +40,10 @@ When loaded into memory, the Grid interpolator takes up ~200 MB of RAM.
 1. The parent directory contains a set of install scripts for the model grids prepackaged with `kiauhoku`. Check the first few lines including the path to the raw grids and the names of the eep_params (which are grid dependent).
 
 2. Open an interactive Python session in the directory with the install script. Do the following (this example uses 'rotevol_fastlaunch.py' as the install script):
-    > `import kiauhoku as kh`
-    > `kh.install_grid('rotevol_fastlaunch')`
+```python
+`import kiauhoku as kh`
+`kh.install_grid('rotevol_fastlaunch')`
+```
 
 3. You're ready to go! You can run `grid = kh.load_interpolator('fastlaunch')` and interpolate away.
 
@@ -63,9 +65,11 @@ Each file contains 171 evolution tracks for 0.30 <= M/Msun <= 2.00 in steps of 0
 ## Basic Usage
 
 Once you have everything running, try doing this:  
-    > `import kiauhoku as kh`
-    > `grid = kh.load_interpolator('fastlaunch')`
-    > `star = grid.get_star_eep(1, 0, 0, 330)`
+```python
+`import kiauhoku as kh`
+`grid = kh.load_interpolator('fastlaunch')`
+`star = grid.get_star_eep(1, 0, 0, 330)`
+```
 
 If it works, you should get something close to the sun. The arguments to get_star_eep are mass (in solar units), metallicity, alpha-abundance, and EEP index. See the documentation for more details.
 
