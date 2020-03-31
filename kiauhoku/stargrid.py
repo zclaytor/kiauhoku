@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from scipy.interpolate import interp1d
+from scipy.optimize import minimize
 import emcee
 
 from isochrones.interp import DFInterpolator
@@ -475,6 +476,57 @@ class StarGridInterpolator(DFInterpolator):
         interpf = interp1d(track[self.eep_params['age']], track.values.T)
         star = pd.Series(interpf(age), labels)
         return star
+
+    def fit_star(self, star_dict,
+                 loss='leastsq',
+                 guess0=(1, 0, 0, 250), 
+                 bounds=[(0.3, 2.0), (-1, 0.5), (0, 0.4), (0, 606)]):
+        '''
+        Fit a star from data using scipy.optimize.minimize.
+
+        PARAMETERS
+        ----------
+        star_dict: dict containing label-value pairs for the star to be fit
+
+        guess0: tuple containing initial guess of input values for star. 
+            These should be of the same form as the input to 
+            StarGridInterpolator.get_star_eep.
+
+        bounds: a sequence of (min, max) tuples for each input parameter.
+
+        RETURNS
+        -------
+        star: pandas.Series of StarGridInterpolator output for result.
+
+        result: the output of scipy.optimize.minimize.
+        '''
+
+        if loss == 'leastsq':
+            loss_function = self._leastsq
+        elif loss == 'meanpercenterror':
+            loss_function = self._meanpcterr
+
+        result = minimize(loss_function, guess0, args=(star_dict,), bounds=bounds)
+        star = self.get_star_eep(*result.x)
+        return star, result   
+
+    def _leastsq(self, x, star_dict):
+        star = self.get_star_eep(*x)
+        ssq = np.average(
+            [(star[l] - star_dict[l])**2 for l in star_dict]
+        )
+        return ssq
+
+    def _meanpcterr(self, x, star_dict):
+        star = self.get_star_eep(*x)
+        mpe = np.average(
+                [np.abs(star[l] - star_dict[l])/star_dict[l] for l in star_dict]
+        )
+        return mpe
+
+    def _test_fit(self):
+        sun = {'R/Rsun':1, 'L/Lsun':1, 'Z/X(surf)': 0.02289, 'Age(Gyr)':4.47}
+        return self.fit_star(sun, bounds=[(0.9, 1.1), (-0.3, 0.3), (0, 0), (250, 400)])
 
     def get_track(self, mass, met, alpha, eep=None):
         if eep is None:
