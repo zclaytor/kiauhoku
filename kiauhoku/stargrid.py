@@ -524,6 +524,27 @@ class StarGridInterpolator(DFInterpolator):
         )
         return mpe
 
+    def _chisq(self, x, star_dict, err_dict, err='average', return_star=False):
+        star = self.get_star_eep(*x)
+
+        chisq = 0
+        for l in star_dict:
+            if isinstance(err_dict[l], tuple):
+                if err == 'average':
+                    uncert = np.average(err_dict[l])
+                elif err == 'min':
+                    uncert = min(err_dict[l])
+                elif err == 'max':
+                    uncert = max(err_dict[l])
+            else:
+                uncert = err_dict[l]
+
+            chisq += ((star[l] - star_dict[l]) / uncert)**2
+        
+        if return_star:
+            return chisq, star
+        return chisq
+
     def _test_fit(self):
         sun = {'R/Rsun':1, 'L/Lsun':1, 'Z/X(surf)': 0.02289, 'Age(Gyr)':4.47}
         return self.fit_star(sun, bounds=[(0.9, 1.1), (-0.3, 0.3), (0, 0), (250, 400)])
