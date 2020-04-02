@@ -2,12 +2,12 @@
 
 Python utilities for stellar model grid interpolation.
 
-NOTE: I am still working on getting the model grid files available to download online. For now, if you'd like access to the grids, send me an email. Thanks!
+Download the model grids from [Google Drive][google drive].
 
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
 University of Hawaiʻi  
-2020 March 18
+2020 April 1
 
 Kīauhōkū  
 From Hawaiian:  
@@ -16,7 +16,9 @@ From Hawaiian:
 
 This name was created in partnership with Dr. Larry Kimura and Bruce Torres Fischer, a student participant in *A Hua He Inoa*, a program to bring Hawaiian naming practices to new astronomical discoveries. We are grateful for their collaboration.
 
-Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, comes packaged with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of van Saders et al. (2013). See literature for details.
+Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, it is designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of van Saders et al. (2013). If you find this package useful, please cite that paper.
+
+I am currently in the process of adapting the code to work with a wider range of stellar evolution models, so stay tuned!
 
 
 Kīauhōkū requires the use of Python 3 and uses the following Python packages:  
@@ -36,8 +38,16 @@ The raw model files take up 4.1 GB of space. Once individually pickled and conde
 When loaded into memory, the Grid interpolator takes up ~200 MB of RAM.
 
 
+## Installation
+```bash
+git clone https://github.com/zclaytor/kiauhoku
+cd kiauhoku
+pip install .
+```
+
+
 ## I don't care about the documentation. Just let me get started!
-1. The parent directory contains a set of install scripts for the model grids prepackaged with `kiauhoku`. Check the first few lines including the path to the raw grids and the names of the eep_params (which are grid dependent).
+1. The parent directory contains a set of install scripts for the model grids. Download the model grids from [Google Drive][google drive], then check the first few lines of the install script, including the path to the grids and the names of the eep_params (which are grid dependent).
 
 2. Open an interactive Python session in the directory with the install script. Do the following (this example uses 'rotevol_fastlaunch.py' as the install script):
 ```python
@@ -73,7 +83,7 @@ star = grid.get_star_eep(1, 0, 0, 330)
 
 If it works, you should get something close to the sun. The arguments to get_star_eep are mass (in solar units), metallicity, alpha-abundance, and EEP index. See the documentation for more details.
 
-Kīauhōkū comes with MCMC functionality through emcee-3. See the docs for more details.
+Kīauhōkū comes with MCMC functionality through `emcee`. See the jupyter notebook `mcmc.ipynb` for an example.
 
    
 [kiauhoku github]: https://github.com/zclaytor/kiauhoku
@@ -81,3 +91,4 @@ Kīauhōkū comes with MCMC functionality through emcee-3. See the docs for more
 [gyro paper]: https://ui.adsabs.harvard.edu/abs/2020ApJ...888...43C/abstract
 [emcee]: https://emcee.readthedocs.io/en/latest/
 [isochrones]: https://isochrones.readthedocs.io/en/latest/
+[google drive]: https://drive.google.com/drive/folders/1JLB-IATwHT4XE8qk3y3cXv6ek7Lhk2-H?usp=sharing

@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="kiauhoku",
-    version="0.1.0",
+    version="1.0.0",
     author="Zachary R. Claytor",
     author_email="zclaytor@hawaii.edu",
-    description="testing for python packaging",
+    description="utilities for interacting and interpolating stellar evolution models",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/zclaytor/kiauhoku",
