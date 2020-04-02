@@ -9,7 +9,12 @@ from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 import emcee
 
-from isochrones.interp import DFInterpolator
+try:
+    from isochrones.interp import DFInterpolator
+except ImportError:
+    print('Nope!')
+    exit()
+
 
 grids_path = os.path.expanduser('~/') + '.kiauhoku/grids/'
 
@@ -127,7 +132,7 @@ class StarGrid(pd.DataFrame):
             eep_list = []
             idx_list = []
             for m, z, a in idx_iter:
-                eep_track = self.loc[m, z, a, :]._eep_interpolate(**eep_params)
+                eep_track = self.loc[(m, z, a), :]._eep_interpolate(**eep_params)
                 if eep_track is None:
                     continue
                 eep_list.append(eep_track)
@@ -189,12 +194,11 @@ class StarGrid(pd.DataFrame):
         secondary_eep_dist[-1] = primary_eep_dist[-1]
 
         # Create list of interpolator functions
-        interp_fs = [interp1d(dist, self[col]) for col in self.columns]
+        interp = interp1d(dist, self.T)
 
         # Interpolate stellar parameters along evolutionary track for
         # desired EEP distances
-        eep_track = np.array([f(secondary_eep_dist) for f in interp_fs]).T
-        eep_track = pd.DataFrame(eep_track, columns=self.columns)
+        eep_track = pd.DataFrame(interp(secondary_eep_dist).T, columns=self.columns)
         eep_track.index.name = 'eep'
 
         return from_pandas(eep_track)
@@ -244,6 +248,7 @@ class StarGrid(pd.DataFrame):
         greater than logTc.    
         '''
         log_central_temp = self.eep_params['log_central_temp']
+
         logTc_tr = self.loc[i0:, log_central_temp]
         i_PreMS = _first_true_index(logTc_tr >= logTc_crit)
         return i_PreMS
@@ -267,7 +272,7 @@ class StarGrid(pd.DataFrame):
         lum = self.eep_params['lum']
         logg = self.eep_params['logg']
 
-        Xc_init = self.loc[0, core_hydrogen_frac]
+        Xc_init = self.at[0, core_hydrogen_frac]
         Xc_tr = self.loc[i0:, core_hydrogen_frac]
         ZAMS1 = _first_true_index(Xc_tr <= Xc_init-Xc_burned)
         if ZAMS1 == -1:
@@ -392,7 +397,7 @@ class StarGrid(pd.DataFrame):
         lum = self.eep_params['lum']
         log_teff = self.eep_params['log_teff']
 
-        Ymin = self.loc[i0, core_helium_frac] - 1e-2
+        Ymin = self.at[i0, core_helium_frac] - 1e-2
         Yc_tr = self.loc[i0:, core_helium_frac]
         before_He_burned = (Yc_tr > Ymin)
         if not before_He_burned.any():
