@@ -2,6 +2,8 @@
 
 Python utilities for stellar model grid interpolation.
 
+If you find this package useful, please cite [Claytor et al. (2020)][gyro paper].
+
 Download the model grids from [Google Drive][google drive].
 
 (C) [Zachary R. Claytor][zclaytor]  
@@ -16,7 +18,7 @@ From Hawaiian:
 
 This name was created in partnership with Dr. Larry Kimura and Bruce Torres Fischer, a student participant in *A Hua He Inoa*, a program to bring Hawaiian naming practices to new astronomical discoveries. We are grateful for their collaboration.
 
-Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, it is designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of [van Saders et al. (2013)][van Saders]. If you find this package useful, please cite that paper.
+Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, it is designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of [van Saders et al. (2013)][van Saders]. 
 
 I am currently in the process of adapting the code to work with a wider range of stellar evolution models, so stay tuned!
 
