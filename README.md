@@ -16,7 +16,7 @@ From Hawaiian:
 
 This name was created in partnership with Dr. Larry Kimura and Bruce Torres Fischer, a student participant in *A Hua He Inoa*, a program to bring Hawaiian naming practices to new astronomical discoveries. We are grateful for their collaboration.
 
-Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, it is designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of van Saders et al. (2013). If you find this package useful, please cite that paper.
+Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, it is designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of [van Saders et al. (2013)][van Saders]. If you find this package useful, please cite that paper.
 
 I am currently in the process of adapting the code to work with a wider range of stellar evolution models, so stay tuned!
 
@@ -89,6 +89,7 @@ Kīauhōkū comes with MCMC functionality through `emcee`. See the jupyter noteb
 [kiauhoku github]: https://github.com/zclaytor/kiauhoku
 [zclaytor]: https://zclaytor.github.io
 [gyro paper]: https://ui.adsabs.harvard.edu/abs/2020ApJ...888...43C/abstract
+[van Saders]: https://ui.adsabs.harvard.edu/abs/2013ApJ...776...67V/abstract
 [emcee]: https://emcee.readthedocs.io/en/latest/
 [isochrones]: https://isochrones.readthedocs.io/en/latest/
 [google drive]: https://drive.google.com/drive/folders/1JLB-IATwHT4XE8qk3y3cXv6ek7Lhk2-H?usp=sharing
