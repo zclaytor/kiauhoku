@@ -96,7 +96,6 @@ def measure_lengths(grid_name):
     for i, z in enumerate(metallicities):
         for j, m in enumerate(masses):
             try:
-                print(i, j, m, z)
                 grid0[i, j] = eep_lengths.loc[(m, z, 0), 0]
             except:
                 pass

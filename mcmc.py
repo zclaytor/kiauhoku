@@ -73,7 +73,7 @@ def run_mcmc(
 
     sampler = emcee.EnsembleSampler(n_walkers, len(initial_guess),
         log_prob_fn=lnprob, 
-        args=(sun_data, sun_sigma, grid),
+        args=(data, sigma, grid),
         vectorize=False,
         blobs_dtype=[('star', pd.Series)]
     )

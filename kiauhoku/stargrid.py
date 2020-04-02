@@ -553,10 +553,6 @@ class StarGridInterpolator(DFInterpolator):
             return chisq, star
         return chisq
 
-    def _test_fit(self):
-        sun = {'R/Rsun':1, 'L/Lsun':1, 'Z/X(surf)': 0.02289, 'Age(Gyr)':4.47}
-        return self.fit_star(sun, bounds=[(0.9, 1.1), (-0.3, 0.3), (0, 0), (250, 400)])
-
     def get_track(self, mass, met, alpha, eep=None):
         if eep is None:
             num_eeps = self.max_eep + 1
