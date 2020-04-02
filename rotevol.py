@@ -8,8 +8,9 @@ from kiauhoku import stargrid
 
 
 name = 'fastlaunch'
+grid_path = 'path/to/grids'
 
-path_to_raw_grids = '/home/zach/Downloads/grids/' + name
+path_to_raw_grids = os.path.join(grid_path, name)
 filelist = [f for f in os.listdir(path_to_raw_grids) if '.out' in f]
 
 # Assign labels used in eep conversion
