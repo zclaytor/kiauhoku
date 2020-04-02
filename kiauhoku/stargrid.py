@@ -12,8 +12,11 @@ import emcee
 try:
     from isochrones.interp import DFInterpolator
 except ImportError:
-    print('Nope!')
-    exit()
+    print (
+        'Use of kiauhoku requires installation of isochrones:\n'
+        'https://isochrones.readthedocs.io/en/latest/install.html\n'
+    )
+    raise
 
 
 grids_path = os.path.expanduser('~/') + '.kiauhoku/grids/'
