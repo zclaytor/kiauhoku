@@ -54,7 +54,7 @@ pip install .
 2. Open an interactive Python session in the directory with the install script. Do the following (this example uses 'rotevol_fastlaunch.py' as the install script):
 ```python
 import kiauhoku as kh
-kh.install_grid('rotevol')
+kh.install_grid('rotevol_install')
 ```
 
 3. You're ready to go! You can run `grid = kh.load_interpolator('fastlaunch')` and interpolate away.
@@ -88,6 +88,9 @@ If it works, you should get something close to the sun. The arguments to get_sta
 Kīauhōkū comes with MCMC functionality through `emcee`. See the jupyter notebook `mcmc.ipynb` for an example.
 
    
+## Installing custom model grids
+* Under Construction*
+
 [kiauhoku github]: https://github.com/zclaytor/kiauhoku
 [zclaytor]: https://zclaytor.github.io
 [gyro paper]: https://ui.adsabs.harvard.edu/abs/2020ApJ...888...43C/abstract
