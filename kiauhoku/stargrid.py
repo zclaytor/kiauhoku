@@ -537,7 +537,7 @@ class StarGridInterpolator(DFInterpolator):
 
         chisq = 0
         for l in star_dict:
-            if isinstance(err_dict[l], tuple):
+            if isinstance(err_dict[l], (tuple, list, np.array)):
                 if err == 'average':
                     uncert = np.average(err_dict[l])
                 elif err == 'min':
