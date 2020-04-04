@@ -461,7 +461,7 @@ class StarGrid(pd.DataFrame):
         return lengths
 
 class StarGridInterpolator(DFInterpolator):
-    def __init__(self, grid, eep_params):
+    def __init__(self, grid, eep_params=None):
         super(StarGridInterpolator, self).__init__(grid)
 
         self.name = grid.name
@@ -478,10 +478,19 @@ class StarGridInterpolator(DFInterpolator):
         star_values = self((mass, met, alpha, eep))
         return pd.Series(star_values, index=self.columns)
 
-    def get_star_age(self, mass, met, alpha, age):
+    def get_star_age(self, mass, met, alpha, age, age_label=None):
         track = self.get_track(mass, met, alpha)
         labels = track.columns
-        interpf = interp1d(track[self.eep_params['age']], track.values.T)
+        if age_label is None:
+            eep_params = self.eep_params
+            if eep_params is None:
+                raise ValueError(
+                    'No eep_params are stored. Please specify age_label.'
+                )
+            else:
+                age_label = eep_params['age']
+
+        interpf = interp1d(track[age_label], track.values.T)
         star = pd.Series(interpf(age), labels)
         return star
 
@@ -600,7 +609,7 @@ def read_parquet(*args, **kwargs):
     df = pd.read_parquet(*args, **kwargs)
     return from_pandas(df, name=name)
 
-def install_grid(script):
+def install_grid(script, kind='raw'):
     module = import_module(script)
 
     # Create cache directories
@@ -608,20 +617,25 @@ def install_grid(script):
     if not os.path.exists(path):
         os.makedirs(path)
 
-    eep_params = module.eep_params
-    # Cache eep parameters
-    with open(os.path.join(path, 'eep_params.pkl'), 'wb') as f: 
-        pickle.dump(eep_params, f)
+    if kind == 'raw':
+        eep_params = module.eep_params
+        # Cache eep parameters
+        with open(os.path.join(path, 'eep_params.pkl'), 'wb') as f: 
+            pickle.dump(eep_params, f)
     
-    print('Reading and combining grid files')
-    grids = module.setup()
+        print('Reading and combining grid files')
+        grids = module.setup()
     
-    full_save_path = os.path.join(path, 'full_grid.pqt')
-    print(f'Saving to {full_save_path}')
-    grids.to_parquet(full_save_path)
+        full_save_path = os.path.join(path, 'full_grid.pqt')
+        print(f'Saving to {full_save_path}')
+        grids.to_parquet(full_save_path)
 
-    print(f'Converting to eep-based tracks')
-    eeps = grids.to_eep(**eep_params)
+        print(f'Converting to eep-based tracks')
+        eeps = grids.to_eep(**eep_params)
+
+    elif kind == 'eep':
+        eeps = module.setup()
+        eep_params = None
 
     eep_save_path = os.path.join(path, 'eep_grid.pqt')
     print(f'Saving to {eep_save_path}')
