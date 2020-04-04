@@ -494,6 +494,52 @@ class StarGridInterpolator(DFInterpolator):
         star = pd.Series(interpf(age), labels)
         return star
 
+    def mcmc_star(
+        self, log_prob_fn, args,
+        initial_guess, guess_width,
+        n_walkers=12, n_burnin=0, n_iter=500,
+        save_path=None
+    ):
+
+        pos0 = np.array([
+            np.random.normal(initial_guess[l], guess_width[l], n_walkers)
+            for l in initial_guess
+        ]).T
+
+        sampler = emcee.EnsembleSampler(n_walkers, len(initial_guess),
+            log_prob_fn=log_prob_fn, 
+            args=(self,) + args,
+            vectorize=False,
+            blobs_dtype=[('star', pd.Series)]
+        )
+
+        if n_burnin > 0:
+            pos, prob, state, blobs = sampler.run_mcmc(pos0, n_burnin, progress=True)
+            sampler.reset()
+        else:
+            pos = pos0
+
+        pos, prob, state, blobs = sampler.run_mcmc(pos, n_iter, progress=True)
+
+        samples = pd.DataFrame(sampler.flatchain, columns=initial_guess.keys())
+        blobs = sampler.get_blobs(flat=True)
+        blobs = pd.concat(blobs['star'], axis=1).T
+
+        output = pd.concat([samples, blobs], axis=1)
+
+        if save_path:
+            if 'csv' in save_path:
+                output.to_csv(save_path, index=False)
+            elif 'pqt' in save_path:
+                output.to_parquet(save_path, index=False)
+            else:
+                print(
+                    'save_path extension not recognized, so chains were not saved:\n'
+                    f'    {save_path}\n'
+                    'Accepted extensions are .csv and .pqt.'
+                )
+        return sampler, output
+
     def fit_star(self, star_dict,
                  loss='leastsq',
                  guess0=(1, 0, 0, 250), 
@@ -616,9 +662,10 @@ def install_grid(script, kind='raw'):
             'For now, MIST input grids must already be in EEP basis.\n'
             'Please specify kind="eep".'
         )
-        
-    module = import_module(script)
 
+    module = import_module(script)
+    print(f'Installing grid "{module.name}" from {script}')
+    
     # Create cache directories
     path = os.path.join(grids_path, module.name)
     if not os.path.exists(path):
