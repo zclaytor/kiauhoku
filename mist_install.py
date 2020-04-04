@@ -8,7 +8,7 @@ from kiauhoku import stargrid
 
 
 name = 'mist'
-grid_path = '/home/zach/Downloads/grids'
+grid_path = 'path/to/grids'
 
 path_to_raw_grids = os.path.join(grid_path, name)
 
