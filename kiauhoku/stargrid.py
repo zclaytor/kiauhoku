@@ -610,6 +610,13 @@ def read_parquet(*args, **kwargs):
     return from_pandas(df, name=name)
 
 def install_grid(script, kind='raw'):
+    # For now, MIST only works if the grids are already in EEP basis.
+    if 'mist' in script and kind == 'raw':
+        raise NotImplementedError(
+            'For now, MIST input grids must already be in EEP basis.\n'
+            'Please specify kind="eep".'
+        )
+        
     module = import_module(script)
 
     # Create cache directories
