@@ -540,10 +540,12 @@ class StarGridInterpolator(DFInterpolator):
                 )
         return sampler, output
 
-    def fit_star(self, star_dict,
-                 loss='leastsq',
+    def fit_star(self, star_dict, *args,
+                 loss='meansquarederror',
                  guess0=(1, 0, 0, 250), 
-                 bounds=[(0.3, 2.0), (-1, 0.5), (0, 0.4), (0, 606)]):
+                 bounds=[(0.3, 2.0), (-1, 0.5), (0, 0.4), (0, 606)],
+                 **kw
+    ):
         '''
         Fit a star from data using scipy.optimize.minimize.
 
@@ -557,6 +559,10 @@ class StarGridInterpolator(DFInterpolator):
 
         bounds: a sequence of (min, max) tuples for each input parameter.
 
+        args: extra arguments to be passed to the loss function.
+
+        kw: extra keyword arguments to be passed to scipy.optimize.minimize.
+
         RETURNS
         -------
         star: pandas.Series of StarGridInterpolator output for result.
@@ -564,23 +570,27 @@ class StarGridInterpolator(DFInterpolator):
         result: the output of scipy.optimize.minimize.
         '''
 
-        if loss == 'leastsq':
-            loss_function = self._leastsq
+        if loss == 'meansquarederror':
+            loss_function = self._meansquarederror
         elif loss == 'meanpercenterror':
             loss_function = self._meanpcterr
 
-        result = minimize(loss_function, guess0, args=(star_dict,), bounds=bounds)
+        args = (star_dict, *args)
+        result = minimize(loss_function, guess0, args=args, bounds=bounds, **kw)
         star = self.get_star_eep(*result.x)
+        
         return star, result   
 
-    def _leastsq(self, x, star_dict):
+    def _meansquarederror(self, x, star_dict, scale=False):
         star = self.get_star_eep(*x)
-        ssq = np.average(
-            [(star[l] - star_dict[l])**2 for l in star_dict]
-        )
-        return ssq
+        sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
+        
+        if scale:
+            sq_err /= np.array(scale)
 
-    def _meanpcterr(self, x, star_dict):
+        return np.average(sq_err)
+
+    def _meanpercenterror(self, x, star_dict):
         star = self.get_star_eep(*x)
         mpe = np.average(
                 [np.abs(star[l] - star_dict[l])/star_dict[l] for l in star_dict]
