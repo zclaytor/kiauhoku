@@ -3,4 +3,5 @@ __pycache__
 .ipynb_checkpoints
 my_rotevol.py
 my_mist.py
+my_yrec.py
 issues.txt
