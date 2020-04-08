@@ -8,14 +8,12 @@ from kiauhoku import stargrid
 
 
 name = 'fastlaunch'
-grid_path = 'path/to/grids'
+path_to_raw_grids = 'path/to/raw/grids'
 
-path_to_raw_grids = os.path.join(grid_path, name)
 filelist = [f for f in os.listdir(path_to_raw_grids) if '.out' in f]
 
 # Assign labels used in eep conversion
 eep_params = dict(
-    name = name,
     age = 'Age(Gyr)',
     log_central_temp = 'logT(cen)',
     core_hydrogen_frac = 'Xcen',
@@ -103,7 +101,7 @@ def from_rotevol(path):
     df = df.drop(columns=['J', 'K', 'dummyGamma', 'dummyCcore'])
     df = df.loc[:, ~df.columns.duplicated()]
 
-    return stargrid.from_pandas(df, name)
+    return df
 
 def all_from_rotevol(progress=True):
     df_list = []
@@ -118,9 +116,6 @@ def all_from_rotevol(progress=True):
         df_list.append(from_rotevol(fpath))
 
     dfs = pd.concat(df_list).sort_index()
-
-    if dfs.name is None:
-        dfs.name = name
 
     return dfs    
 

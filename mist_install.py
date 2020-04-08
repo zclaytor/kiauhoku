@@ -8,9 +8,7 @@ from kiauhoku import stargrid
 
 
 name = 'mist'
-grid_path = 'path/to/grids'
-
-path_to_raw_grids = os.path.join(grid_path, name)
+path_to_raw_grids = 'path/to/raw/grids'
 
 def from_mist(path):
     with open(path, 'r') as f:
@@ -38,7 +36,7 @@ def from_mist(path):
         names=['initial_mass', 'initial_met', 'initial_alpha', 'eep'])
     df = pd.DataFrame(data, index=multi_index, columns=columns)
 
-    return stargrid.from_pandas(df, name)
+    return df
 
 def all_from_mist(progress=True):
     filelist = []
@@ -61,9 +59,6 @@ def all_from_mist(progress=True):
         except:
             print(f'Error reading {fname}---skipping.')
     dfs = pd.concat(df_list).sort_index()
-
-    if dfs.name is None:
-        dfs.name = name
 
     return dfs    
 
