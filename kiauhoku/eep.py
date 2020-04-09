@@ -2,7 +2,86 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 
+'''
+Have some documentation here about defining your own EEP functions.
+'''
 
+def _eep_interpolate(track, eep_params, eep_functions, metric_function=None):
+    '''
+    Given a raw evolutionary track, returns a downsampled track based on
+    Equivalent Evolutionary Phases (EEPs). The primary EEPs are defined in the
+    function `PrimaryEEPs`, and the secondary EEPs are computed based on the
+    number of secondary EEPs between each pair of primary EEPs as specified
+    in the list `EEP_intervals`. If one of the EEP_intervals is 200, then
+    for that pair of primary EEPs, the metric distance between those primary
+    EEPs is divided into 200 equally spaced points, and the relevant stellar
+    parameters are linearly interpolated at those points.
+    '''
+
+    i_eep = _locate_primary_eeps(track, eep_params, eep_functions)
+    num_intervals = len(i_eep) - 1
+    # In some cases, the raw models do not hit the ZAMS. In these cases,
+    # return None.
+    if num_intervals == 0:
+        return
+
+    if metric_function is None:
+        metric_function = _HRD_distance
+        
+    dist = metric_function(track, eep_params) # compute metric distance along track
+
+    primary_eep_dist = dist[i_eep]
+    eep_intervals = eep_params['intervals']
+    secondary_eep_dist = np.zeros(sum(eep_intervals[:num_intervals]) + len(i_eep))
+
+    # Determine appropriate distance to each secondary EEP
+    j0 = 0
+    for i in range(num_intervals):
+        my_dist = primary_eep_dist[i+1] - primary_eep_dist[i]
+        delta = my_dist/(eep_intervals[i] + 1)
+        new_dist = np.array([primary_eep_dist[i] + delta*j \
+                for j in range(eep_intervals[i]+1)])
+        
+        secondary_eep_dist[j0:j0+len(new_dist)] = new_dist
+        j0 += len(new_dist)
+
+    secondary_eep_dist[-1] = primary_eep_dist[-1]
+
+    # Create list of interpolator functions
+    interp = interp1d(dist, track.T)
+
+    # Interpolate stellar parameters along evolutionary track for
+    # desired EEP distances
+    eep_track = pd.DataFrame(interp(secondary_eep_dist).T, columns=track.columns)
+    eep_track.index.name = 'eep'
+
+    return eep_track
+
+def _locate_primary_eeps(track, eep_params, eep_functions=None):
+    '''
+    Given a track, returns a list containing indices of Equivalent
+    Evolutionary Phases (EEPs)
+    '''
+
+    # define a list of functions to iterate over
+    eep_f = default_eep_functions
+    if eep_functions is None:
+        eep_functions = default_eep_functions
+    else:
+        eep_f.update(eep_functions)        
+
+    # get indices of EEPs
+    i_eep = []
+    i_start = 0
+    for f in eep_f.values():
+        i_phase = f(track, eep_params, i0=i_start)
+        i_eep.append(i_phase)
+        i_start = i_phase
+        if i_start == -1:
+            return np.array(i_eep[:-1])
+    
+    return np.array(i_eep)
+    
 def get_PreMS(track, eep_params, i0=0, logTc_crit=5.0):
     '''
     The pre-main sequence EEP is the point where central temperature rises
@@ -251,87 +330,13 @@ def get_WDCS(track, eep_params, i0=None):
         'Function "get_WDCS" not yet implemented.'
     )
 
-def _eep_interpolate(track, eep_params, eep_functions):
-    '''
-    Given a raw evolutionary track, returns a downsampled track based on
-    Equivalent Evolutionary Phases (EEPs). The primary EEPs are defined in the
-    function `PrimaryEEPs`, and the secondary EEPs are computed based on the
-    number of secondary EEPs between each pair of primary EEPs as specified
-    in the list `EEP_intervals`. If one of the EEP_intervals is 200, then
-    for that pair of primary EEPs, the metric distance between those primary
-    EEPs is divided into 200 equally spaced points, and the relevant stellar
-    parameters are linearly interpolated at those points.
-    '''
 
-    i_eep = _locate_primary_eeps(track, eep_params, eep_functions)
-    num_intervals = len(i_eep) - 1
-    # In some cases, the raw models do not hit the ZAMS. In these cases,
-    # return None.
-    if num_intervals == 0:
-        return
-
-    dist = _Metric_Function(track, eep_params) # compute metric distance along track
-
-    primary_eep_dist = dist[i_eep]
-    eep_intervals = eep_params['intervals']
-    secondary_eep_dist = np.zeros(sum(eep_intervals[:num_intervals]) + len(i_eep))
-
-    # Determine appropriate distance to each secondary EEP
-    j0 = 0
-    for i in range(num_intervals):
-        my_dist = primary_eep_dist[i+1] - primary_eep_dist[i]
-        delta = my_dist/(eep_intervals[i] + 1)
-        new_dist = np.array([primary_eep_dist[i] + delta*j \
-                for j in range(eep_intervals[i]+1)])
-        
-        secondary_eep_dist[j0:j0+len(new_dist)] = new_dist
-        j0 += len(new_dist)
-
-    secondary_eep_dist[-1] = primary_eep_dist[-1]
-
-    # Create list of interpolator functions
-    interp = interp1d(dist, track.T)
-
-    # Interpolate stellar parameters along evolutionary track for
-    # desired EEP distances
-    eep_track = pd.DataFrame(interp(secondary_eep_dist).T, columns=track.columns)
-    eep_track.index.name = 'eep'
-
-    return eep_track
-
-
-def _locate_primary_eeps(track, eep_params, eep_functions=None):
-    '''
-    Given a track, returns a list containing indices of Equivalent
-    Evolutionary Phases (EEPs)
-    '''
-
-    # define a list of functions to iterate over
-    if eep_functions is None:
-        eep_functions = default_eep_functions
-
-    # get indices of EEPs
-    i_eep = []
-    i_start = 0
-    for f in eep_functions:
-        i_phase = f(track, eep_params, i0=i_start)
-        i_eep.append(i_phase)
-        i_start = i_phase
-        if i_start == -1:
-            return np.array(i_eep[:-1])
-    
-    return np.array(i_eep)
-    
-def _Metric_Function(track, eep_params):
+def _HRD_distance(track, eep_params):
     '''
     The Metric Function is used to calculate the distance along the evolution
     track. Traditionally, the Euclidean distance along the track on the
     H-R diagram has been used, but any positive-definite function will work.
-    '''
-    return _HRD_distance(track, eep_params)
-
-def _HRD_distance(track, eep_params):
-    '''
+    
     Distance along the H-R diagram, to be used in the Metric Function.
     Returns an array containing the distance from the beginning of the 
     evolution track for each step along the track, in logarithmic effective
@@ -368,14 +373,13 @@ def _first_true_index(bools):
     '''
     if not bools.any():
         return -1
-    bools.idxmax()
     return bools.idxmax()
 
-default_eep_functions = [
-    get_PreMS,
-    get_ZAMS,
-    get_EAMS,
-    get_IAMS,
-    get_TAMS,
-    get_RGBump,
-]
+default_eep_functions = {
+    'prems': get_PreMS,
+    'zams': get_ZAMS,
+    'eams': get_EAMS,
+    'iams': get_IAMS,
+    'tams': get_TAMS,
+    'rgbump': get_RGBump,
+}

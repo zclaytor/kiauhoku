@@ -8,7 +8,7 @@ from kiauhoku import stargrid
 name = 'yrec'
 col_name = 'column_labels.txt'
 
-path_to_raw_grids = '/path/to/raw/grids'
+path_to_raw_grids = 'path/to/raw/grids'
 col_path = os.path.join(path_to_raw_grids, col_name)
 
 filelist = [f for f in os.listdir(path_to_raw_grids) if '.track' in f]
@@ -35,6 +35,60 @@ eep_params = dict(
                  150], # TAMS-RGBump
 )
 
+def my_RGBump(track, eep_params, i0=None):
+    '''
+    Modified from eep.get_RGBump to make luminosity logarithmic
+    '''
+
+    lum = eep_params['lum']
+    log_teff = eep_params['log_teff']
+    N = len(track)
+
+    lum_tr = track.loc[i0:, lum]
+    logT_tr = track.loc[i0:, log_teff]
+
+    lum_greater = (lum_tr > 1)
+    if not lum_greater.any():
+        return -1
+    RGBump = lum_greater.idxmax() + 1
+
+    while logT_tr[RGBump] < logT_tr[RGBump-1] and RGBump < N-1:
+        RGBump += 1
+
+    # Two cases: 1) We didn't reach an extremum, in which case RGBump gets
+    # set as the final index of the track. In this case, return -1.
+    # 2) We found the extremum, in which case RGBump gets set
+    # as the index corresponding to the extremum.
+    if RGBump >= N-1:
+        return -1
+    return RGBump-1
+
+def my_HRD(track, eep_params):
+    '''
+    Adapted from eep._HRD_distance to fix lum logarithm
+    '''
+
+    # Allow for scaling to make changes in Teff and L comparable
+    Tscale = eep_params['teff_scale']
+    Lscale = eep_params['lum_scale']
+
+    log_teff = eep_params['log_teff']
+    lum = eep_params['lum']
+
+    logTeff = track[log_teff]
+    logLum = track[lum]
+
+    N = len(track)
+    dist = np.zeros(N)
+    for i in range(1, N):
+        temp_dist = (((logTeff.iloc[i] - logTeff.iloc[i-1])*Tscale)**2
+                    + ((logLum.iloc[i] - logLum.iloc[i-1])*Lscale)**2)
+        dist[i] = dist[i-1] + np.sqrt(temp_dist)
+
+    return dist
+
+eep_functions = {'rgbump': my_RGBump}
+metric_function = my_HRD
 
 def read_columns(path):
     with open(path, 'r') as f:

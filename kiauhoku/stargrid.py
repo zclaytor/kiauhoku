@@ -121,7 +121,9 @@ class StarGrid(pd.DataFrame):
     def is_MultiIndex(self):
         return isinstance(self.index, pd.MultiIndex)
 
-    def to_eep(self, eep_params=None, eep_functions=None, progress=True, use_pool=False):
+    def to_eep(self, eep_params=None, eep_functions=None, metric_function=None,
+        progress=True, use_pool=False):
+
         if use_pool:
             print('Pooling not yet implemented in <function StarGrid.to_eep>')
         
@@ -141,7 +143,8 @@ class StarGrid(pd.DataFrame):
                 eep_track = _eep_interpolate(
                     self.loc[(m, z, a), :], 
                     eep_params,
-                    eep_functions
+                    eep_functions,
+                    metric_function
                 )
                 if eep_track is None:
                     continue
@@ -155,7 +158,9 @@ class StarGrid(pd.DataFrame):
             eep_frame.index = multiindex
 
         else:
-            eep_frame = _eep_interpolate(self, eep_params, eep_functions)
+            eep_frame = _eep_interpolate(
+                self, eep_params, eep_functions, metric_function
+            )
 
         eep_frame = from_pandas(eep_frame, name=self.name, eep_params=eep_params)
 
@@ -406,7 +411,16 @@ def install_grid(script, kind='raw'):
         grids.to_parquet(full_save_path)
 
         print(f'Converting to eep-based tracks')
-        eeps = grids.to_eep(eep_params)
+        try:
+            eep_functions = module.eep_functions
+        except AttributeError:
+            eep_functions = None
+        try: 
+            metric_function = module.metric_function
+        except:
+            metric_function = None
+
+        eeps = grids.to_eep(eep_params, eep_functions, metric_function)
 
     elif kind == 'eep':
         eeps = module.setup()
