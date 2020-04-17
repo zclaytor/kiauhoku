@@ -125,11 +125,10 @@ def from_yrec(path, columns=None):
     s = np.arange(len(data))
     m = np.ones_like(s) * initial_mass
     z = np.ones_like(s) * initial_met
-    a = np.ones_like(s) * initial_alpha
 
     # Build multi-indexed DataFrame, dropping unwanted columns
-    multi_index = pd.MultiIndex.from_tuples(zip(m, z, a, s),
-        names=['initial_mass', 'initial_met', 'initial_alpha', 'step'])
+    multi_index = pd.MultiIndex.from_tuples(zip(m, z, s),
+        names=['initial_mass', 'initial_met', 'step'])
     df = pd.DataFrame(data, index=multi_index, columns=columns)
     df = df.drop(columns=[c for c in columns if '#' in c])
 

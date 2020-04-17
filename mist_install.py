@@ -20,7 +20,6 @@ def from_mist(path):
     init_values2 = lines[7].strip('#\n').split()
 
     initial_met = float(init_values1[init_names1.index('[Fe/H]')])
-    initial_alpha = float(init_values1[init_names1.index('[a/Fe]')])
     initial_mass = float(init_values2[init_names2.index('initial_mass')])
 
     columns = lines[11].strip('#\n').split()
@@ -29,11 +28,10 @@ def from_mist(path):
     s = np.arange(len(data))
     m = np.ones_like(s) * initial_mass
     z = np.ones_like(s) * initial_met
-    a = np.ones_like(s) * initial_alpha
 
     # Build multi-indexed DataFrame, dropping unwanted columns
-    multi_index = pd.MultiIndex.from_tuples(zip(m, z, a, s),
-        names=['initial_mass', 'initial_met', 'initial_alpha', 'eep'])
+    multi_index = pd.MultiIndex.from_tuples(zip(m, z, s),
+        names=['initial_mass', 'initial_met', 'eep'])
     df = pd.DataFrame(data, index=multi_index, columns=columns)
 
     return df

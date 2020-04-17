@@ -54,69 +54,8 @@ class StarGrid(pd.DataFrame):
     def set_name(self, name):
         self.name = name
 
-    def _check_bounds(self, mass, met, alpha):
-        mass_min, mass_max = self.get_mass_lim()
-        if not (mass_min <= mass <= mass_max):
-            raise ValueError(f'Mass {mass} out of range {self.mass_lim}.')
-        met_min, met_max = self.get_met_lim()
-        if not (met_min <= met <= met_max):
-            raise ValueError(f'Metallicity {met} out of range {self.met_lim}.')
-        alpha_min, alpha_max = self.get_alpha_lim()
-        if not (alpha_min <= alpha <= alpha_max):
-            raise ValueError(f'Alpha {alpha} out of range {self.alpha_lim}.')
-        return True
-
-    def _get_values_helper(self, column):
-        if not self.is_MultiIndex():
-            raise ValueError('Grid is not MultiIndex.')
-        values = self.index.get_level_values(column).drop_duplicates().values
-        return values
-
-    def get_mass_values(self):
-        values = self._get_values_helper('initial_mass')
-        return values
-
-    def get_met_values(self):
-        values = self._get_values_helper('initial_met')
-        return values
-
-    def get_alpha_values(self):
-        values = self._get_values_helper('initial_alpha') 
-        return values
-
-    def get_mass_min(self):
-        return self.get_mass_values().min()
-        
-    def get_mass_max(self):
-        return self.get_mass_values().max()
-
-    def get_met_min(self):
-        return self.get_met_values().min()
-
-    def get_met_max(self):
-        return self.get_met_values().max()
-
-    def get_alpha_min(self):
-        return self.get_alpha_values().min()
-
-    def get_alpha_max(self):
-        return self.get_alpha_values().max()
-
-    def get_mass_lim(self):
-        values = self.get_mass_values()
-        return (values.min(), values.max())
-
-    def get_met_lim(self):
-        values = self.get_met_values()
-        return (values.min(), values.max())
-
-    def get_alpha_lim(self):
-        values = self.get_alpha_values()
-        return (values.min(), values.max())
-
-    def get_track(self, mass, met, alpha):
-        if self._check_bounds(mass, met, alpha):
-            return self.loc[(mass, met, alpha), :]
+    def get_track(self, index):
+        return self.loc[index, :]
    
     def is_MultiIndex(self):
         return isinstance(self.index, pd.MultiIndex)
@@ -139,9 +78,9 @@ class StarGrid(pd.DataFrame):
 
             eep_list = []
             idx_list = []
-            for m, z, a in idx_iter:
+            for i in idx_iter:
                 eep_track = _eep_interpolate(
-                    self.loc[(m, z, a), :], 
+                    self.loc[i, :], 
                     eep_params,
                     eep_functions,
                     metric_function
@@ -149,10 +88,10 @@ class StarGrid(pd.DataFrame):
                 if eep_track is None:
                     continue
                 eep_list.append(eep_track)
-                idx_list += [(m, z, a, i) for i in eep_track.index]
+                idx_list += [(*i, j_eep) for j_eep in eep_track.index]
 
             multiindex = pd.MultiIndex.from_tuples(idx_list,
-                names=['initial_mass', 'initial_met', 'initial_alpha', 'eep'])
+                names=idx.names+['eep'])
 
             eep_frame = pd.concat(eep_list, ignore_index=True)
             eep_frame.index = multiindex
@@ -182,19 +121,15 @@ class StarGridInterpolator(DFInterpolator):
         self.name = grid.name
         self.columns = grid.columns
 
-        self.mass_lim = grid.get_mass_lim()
-        self.met_lim = grid.get_met_lim()
-        self.alpha_lim = grid.get_alpha_lim()
-
         self.max_eep = grid.index.to_frame().eep.max()
         self.eep_params = grid.eep_params
 
-    def get_star_eep(self, mass, met, alpha, eep):
-        star_values = self((mass, met, alpha, eep))
+    def get_star_eep(self, index):
+        star_values = self(index)
         return pd.Series(star_values, index=self.columns)
 
-    def get_star_age(self, mass, met, alpha, age, age_label=None):
-        track = self.get_track(mass, met, alpha)
+    def get_star_age(self, index, age, age_label=None):
+        track = self.get_track(index)
         labels = track.columns
         if age_label is None:
             eep_params = self.eep_params
@@ -255,10 +190,11 @@ class StarGridInterpolator(DFInterpolator):
                 )
         return sampler, output
 
-    def fit_star(self, star_dict, *args,
+    def fit_star(self, star_dict,
+                 guess, 
+                 bounds,
+                 *args,
                  loss='meansquarederror',
-                 guess0=(1, 0, 0, 250), 
-                 bounds=[(0.3, 2.0), (-1, 0.5), (0, 0.4), (0, 606)],
                  **kw
     ):
         '''
@@ -268,7 +204,7 @@ class StarGridInterpolator(DFInterpolator):
         ----------
         star_dict: dict containing label-value pairs for the star to be fit
 
-        guess0: tuple containing initial guess of input values for star. 
+        guess: tuple containing initial guess of input values for star. 
             These should be of the same form as the input to 
             StarGridInterpolator.get_star_eep.
 
@@ -288,16 +224,16 @@ class StarGridInterpolator(DFInterpolator):
         if loss == 'meansquarederror':
             loss_function = self._meansquarederror
         elif loss == 'meanpercenterror':
-            loss_function = self._meanpcterr
+            loss_function = self._meanpercenterror
 
         args = (star_dict, *args)
-        result = minimize(loss_function, guess0, args=args, bounds=bounds, **kw)
-        star = self.get_star_eep(*result.x)
+        result = minimize(loss_function, guess, args=args, bounds=bounds, **kw)
+        star = self.get_star_eep(result.x)
         
         return star, result   
 
     def _meansquarederror(self, x, star_dict, scale=False):
-        star = self.get_star_eep(*x)
+        star = self.get_star_eep(x)
         sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
         
         if scale:
@@ -306,14 +242,14 @@ class StarGridInterpolator(DFInterpolator):
         return np.average(sq_err)
 
     def _meanpercenterror(self, x, star_dict):
-        star = self.get_star_eep(*x)
+        star = self.get_star_eep(x)
         mpe = np.average(
                 [np.abs(star[l] - star_dict[l])/star_dict[l] for l in star_dict]
         )
         return mpe
 
     def _chisq(self, x, star_dict, err_dict, err='average', return_star=False):
-        star = self.get_star_eep(*x)
+        star = self.get_star_eep(x)
 
         chisq = 0
         for l in star_dict:
@@ -333,12 +269,10 @@ class StarGridInterpolator(DFInterpolator):
             return chisq, star
         return chisq
 
-    def get_track(self, mass, met, alpha, eep=None):
-        if eep is None:
-            num_eeps = self.max_eep + 1
-            ones_arr = np.ones(num_eeps)
-            eep = range(num_eeps)
-        idx = [mass*ones_arr, met*ones_arr, alpha*ones_arr, np.array(eep)]
+    def get_track(self, index):
+        num_eeps = self.max_eep + 1
+        ones_arr = np.ones(num_eeps)
+        idx = [i*ones_arr for i in index] + [np.arange(num_eeps)]
         star_values = self(idx)
         return StarGrid(star_values, columns=self.columns, name=self.name, eep_params=self.eep_params)
 
