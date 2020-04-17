@@ -62,7 +62,7 @@ kh.install_grid('rotevol_install')
 
 ## How it works
 
-We start with output evolution tracks from your favorite stellar modeling software. For YREC, these are the \*.out files. Each \*.out file has, for one specific initial metallicity and alpha-abundance, a series of evolution tracks for a range of initial masses. The grid included with `kiauhoku` has eight \*.out files, corresponding to  
+We start with output evolution tracks from your favorite stellar modeling software. For `rotevol` output, these are the \*.out files. Each \*.out file has, for one specific initial metallicity and alpha-abundance, a series of evolution tracks for a range of initial masses. The default grid for `kiauhoku` has eight \*.out files, corresponding to  
 [M/H] ~ [-1.0, -0.5, 0.0, 0.5] and  
 [alpha/M] ~ [0.0, 0.4].  
 Each file contains 171 evolution tracks for 0.30 <= M/Msun <= 2.00 in steps of 0.01\*Msun.
@@ -80,16 +80,30 @@ Once you have everything running, try doing this:
 ```python
 import kiauhoku as kh
 grid = kh.load_interpolator('fastlaunch')
-star = grid.get_star_eep(1, 0, 0, 330)
+star = grid.get_star_eep((1, 0, 0, 330))
 ```
 
-If it works, you should get something close to the sun. The arguments to get_star_eep are mass (in solar units), metallicity, alpha-abundance, and EEP index. See the documentation for more details.
+If it works, you should get something close to the sun. The argument to get_star_eep is a tuple containing the model grid indices. In this case, those are mass (in solar units), metallicity, alpha-abundance, and EEP index. See the documentation for more details.
 
 Kīauhōkū comes with MCMC functionality through `emcee`. See the jupyter notebook `mcmc.ipynb` for an example.
 
    
-## Installing custom model grids
-* Under Construction*
+## Installing Custom Model Grids
+
+To install your own custom grid, you will want to create a setup script (see `rotevol_install.py`, `yrec_install.py`, or `mist_intall.py` for examples). The only requirements are that your setup file contains (1) a function called `setup` that returns a pandas MultiIndexed DataFrame containing all your evolution tracks, and (2) a variable `name` that is set to whatever you want your installed grid to be named.
+
+The index for this DataFrame is what all the "get" functions will use to get and interpolate tracks and EEPs. Thus, if you want to access your grid using mass and metallicity, you'll want the DataFrame returned by `setup` to have mass and metallicity, as well as a column to represent the time step.
+
+You can also use the setup file to define custom EEP functions (see `yrec_install.my_RGBump`) for an example) and to tell `kiauhoku` which columns to use in its default EEP functions.
+
+Once your setup file (let's call it `my_setup.py`), you can install your custom grid using
+```python
+import kiauhoku as kh
+kh.install_grid('my_setup')
+```
+
+If you create a setup file for your favorite model grid and you'd like it to be public, create a pull request and I'll add you as a contributor!
+
 
 [kiauhoku github]: https://github.com/zclaytor/kiauhoku
 [zclaytor]: https://zclaytor.github.io

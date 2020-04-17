@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="kiauhoku",
-    version="1.0.3",
+    version="1.0.4",
     author="Zachary R. Claytor",
     author_email="zclaytor@hawaii.edu",
     description="utilities for interacting and interpolating stellar evolution models",

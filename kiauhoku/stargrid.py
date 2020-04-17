@@ -70,7 +70,7 @@ class StarGrid(pd.DataFrame):
             eep_params = load_eep_params(self.name)
 
         if self.is_MultiIndex():
-            idx = self.index.droplevel('step').drop_duplicates()
+            idx = self.index.droplevel(-1).drop_duplicates()
             if progress:
                 idx_iter = tqdm(idx)
             else:
