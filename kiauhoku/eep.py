@@ -1,21 +1,58 @@
+'''
+eep.py
+
+Utilities to downsample stellar evolution tracks to Equivalent Evolutionary
+Phase (EEP) basis, according to the method of Dotter (2016). 
+
+The default EEP functions are contained in eep.default_eep_functions. They are
+    default_eep_functions = {
+        'prems': get_PreMS,
+        'zams': get_ZAMS,
+        'eams': get_EAMS,
+        'iams': get_IAMS,
+        'tams': get_TAMS,
+        'rgbump': get_RGBump,
+    }
+
+You can define and supply your own EEP functions in a dictionary. 
+EEP functions must have the call signature
+    function(track, eep_params)
+where `track` is a single track.
+'''
+
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 
-'''
-Have some documentation here about defining your own EEP functions.
-'''
 
 def _eep_interpolate(track, eep_params, eep_functions, metric_function=None):
     '''
     Given a raw evolutionary track, returns a downsampled track based on
-    Equivalent Evolutionary Phases (EEPs). The primary EEPs are defined in the
-    function `PrimaryEEPs`, and the secondary EEPs are computed based on the
+    Equivalent Evolutionary Phases (EEPs). The primary EEPs are defined below,
+    and the default ones to use in the computation are listed in
+    eep.default_eep_functions. The secondary EEPs are computed based on the
     number of secondary EEPs between each pair of primary EEPs as specified
-    in the list `EEP_intervals`. If one of the EEP_intervals is 200, then
-    for that pair of primary EEPs, the metric distance between those primary
-    EEPs is divided into 200 equally spaced points, and the relevant stellar
-    parameters are linearly interpolated at those points.
+    in `eep_params.intervals`; these should be defined in the grid
+    installation file. If one of the EEP_intervals is 200, then for that pair
+    of primary EEPs, the metric distance between those primary EEPs is divided
+    into 200 equally spaced points, and the relevant stellar parameters are
+    linearly interpolated at those points.
+
+    Parameters
+    ----------
+    track (StarGrid): single-index StarGrid to be interpolated.
+
+    eep_params (dict): dictionary of column names to use in EEP computation, 
+        as well as secondary EEP intervals.
+
+    eep_functions (dict): dictionary of callables to use for EEP computation.
+
+    metric_function (callable, optional): function to compute EEP intervals.
+        If none is specified, eep._HRD_distance will be used.
+
+    Returns
+    -------
+    eep_track, a pandas DataFrame containing the EEP-based track.
     '''
 
     i_eep = _locate_primary_eeps(track, eep_params, eep_functions)
@@ -95,7 +132,7 @@ def get_PreMS(track, eep_params, i0=0, logTc_crit=5.0):
     natural return value is i0. So we don't mistake this failed search,
     we must check the value at i0 to make sure it satisfies our criterion.
 
-    RETURNS
+    Returns
     -------
     `i_PreMS`: (int) index of the first element in track[i0: "logT(cen)"]
     greater than logTc.    
@@ -161,7 +198,7 @@ def get_IorT_AMS(track, eep_params, i0, Xmin):
 
 def get_EAMS(track, eep_params, i0=12, Xmin=0.55):
     '''
-    Early-Age Main Sequence. Without this, the low-mass tracks do not
+    Early-Age Main Sequence. Without this, the low-mass rotevol tracks do not
     reach an EEP past the ZAMS before 15 Gyr.
     '''
     i_EAMS = get_IorT_AMS(track, eep_params, i0, Xmin)
@@ -204,14 +241,8 @@ def get_RGBump(track, eep_params, i0=None):
     which gets mistakenly identified as the RGBump. To avoid this, I force the
     RGBump to be the first local minimum in Teff after the TAMS *and* with
     a luminosity above 10 Lsun.
-
-    Added 2019/05/28: The default grid has two tracks that *just barely* do
-    not reach the RGBump. These tracks will use _RGBump_special. In this
-    function, I manually set the final point in these tracks as the RGBump
-    to extend their EEPs. This will only affect calculations pas the TAMS
-    for stars adjacent to these tracks in the grid, and the errors should be
-    negligible (but I have not quantified them).
     '''
+
     lum = eep_params['lum']
     log_teff = eep_params['log_teff']
     N = len(track)

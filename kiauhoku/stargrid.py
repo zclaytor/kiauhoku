@@ -1,3 +1,10 @@
+'''
+stargrid.py
+
+Contains classes and functions to interact with and interpolate stellar
+evolutionary model grids
+'''
+
 import os
 from importlib import import_module
 import pickle
@@ -12,7 +19,7 @@ import emcee
 try:
     from isochrones.interp import DFInterpolator
 except ImportError:
-    print (
+    print(
         'Use of kiauhoku requires installation of isochrones:\n'
         'https://isochrones.readthedocs.io/en/latest/install.html\n'
     )
@@ -24,6 +31,20 @@ from .eep import _eep_interpolate
 grids_path = os.path.expanduser('~/') + '.kiauhoku/grids/'
 
 class StarGrid(pd.DataFrame):
+    '''
+    StarGrid is designed to store and interact with stellar evolution tracks.
+    It is little more than a pandas DataFrame with a few extra features.
+
+    Parameters
+    ----------
+    name (str): the name of the grid, e.g., 'mist'
+
+    eep_params (dict): for EEP-based grids, eep_params contains a mapping from
+        your grid's specific column names to the names used by kiauhoku's
+        default EEP functions. It also contains 'eep_intervals', the number
+        of secondary EEPs between each consecutive pair of primary EEPs.
+    '''
+
     def __init__(self, *args, **kwargs):
         name = kwargs.pop('name', None)
         eep_params = kwargs.pop('eep_params', None)
@@ -33,7 +54,7 @@ class StarGrid(pd.DataFrame):
         super(StarGrid, self).__init__(*args, **kwargs)
 
         self._metadata = ['name', 'eep_params']
-        # Set StarGrid name        
+        # Set StarGrid name
         self.name = name
         self.eep_params = eep_params
 
@@ -42,7 +63,7 @@ class StarGrid(pd.DataFrame):
     @property
     def _constructor(self):
         return StarGrid
-    
+
     def __setattr__(self, attr, val):
         # have to special case custom attributes because
         # pandas tries to set as columns
@@ -52,20 +73,76 @@ class StarGrid(pd.DataFrame):
             super(StarGrid, self).__setattr__(attr, val)
 
     def set_name(self, name):
+        '''Set the name of the grid.'''
         self.name = name
 
     def get_track(self, index):
+        '''Get a track at a specific index.
+
+        Parameters
+        ----------
+        index (tuple): corresponds to the input indices of the grid. For
+            example, if your grid is indexed by mass, metallicity, and alpha-
+            abundance, to get the track for mass=1, metallicity=0.5, alpha=0,
+
+            >>> track = grid.get_track((1, 0.5, 0))
+
+        Returns
+        -------
+        track (StarGrid): desired evolution track, now indexed only by step.
+        '''
         return self.loc[index, :]
-   
+
     def is_MultiIndex(self):
+        '''Checks whether the StarGrid instance is MultiIndexed.'''
         return isinstance(self.index, pd.MultiIndex)
 
-    def to_eep(self, eep_params=None, eep_functions=None, metric_function=None,
-        progress=True, use_pool=False):
+    def to_eep(self,
+        eep_params=None,
+        eep_functions=None,
+        metric_function=None,
+        progress=True,
+        use_pool=False
+    ):
+        '''
+        Converts the grid of evolution tracks to EEP basis. For details on EEP
+        functions, see the documentation for kiauhoku.eep.
+
+        Parameters
+        ----------
+        eep_params (dict, None): contains a mapping from your grid's specific
+            column names to the names used by kiauhoku's default EEP functions.
+            It also contains 'eep_intervals', the number of secondary EEPs
+            between each consecutive pair of primary EEPs. If none are supplied,
+            kiauhoku will attempt to read them from a cache directory.
+
+        eep_functions (dict, None): if the default EEP functions won't do the
+            job, you can specify your own and supply them in a dictionary.
+            EEP functions must have the call signature
+            function(track, eep_params), where `track` is a single track.
+            If none are supplied, the default functions will be used.
+
+        metric_function (callable, None): the metric function is how the EEP
+            interpolator spaces the secondary EEPs. By default, the path
+            length along the evolution track on the H-R diagram (luminosity vs.
+            Teff) is used, but you can specify your own if desired.
+            metric_function must have the call signature
+            function(track, eep_params), where `track` is a single track.
+            If no function is supplied, defaults to kiauhoku.eep._HRD_distance.
+
+        progress (bool, True): whether or not to display a tqdm progress bar.
+
+        use_pool (bool, False): (not implemented) whether or not to use
+            multiprocessing/pooling.
+
+        Returns
+        -------
+        eep_frame (StarGrid): grid of EEP-based evolution tracks.
+        '''
 
         if use_pool:
             print('Pooling not yet implemented in <function StarGrid.to_eep>')
-        
+
         if not eep_params:
             eep_params = load_eep_params(self.name)
 
@@ -80,7 +157,7 @@ class StarGrid(pd.DataFrame):
             idx_list = []
             for i in idx_iter:
                 eep_track = _eep_interpolate(
-                    self.loc[i, :], 
+                    self.loc[i, :],
                     eep_params,
                     eep_functions,
                     metric_function
@@ -88,10 +165,12 @@ class StarGrid(pd.DataFrame):
                 if eep_track is None:
                     continue
                 eep_list.append(eep_track)
-                idx_list += [(*i, j_eep) for j_eep in eep_track.index]
+                idx_list += [i + (j_eep,) for j_eep in eep_track.index]
 
-            multiindex = pd.MultiIndex.from_tuples(idx_list,
-                names=idx.names+['eep'])
+            multiindex = pd.MultiIndex.from_tuples(
+                idx_list,
+                names=idx.names+['eep']
+            )
 
             eep_frame = pd.concat(eep_list, ignore_index=True)
             eep_frame.index = multiindex
@@ -106,6 +185,17 @@ class StarGrid(pd.DataFrame):
         return eep_frame
 
     def get_eep_track_lengths(self):
+        '''
+        This is mainly a convenience function to be used in the script
+        `eep_track_lengths.py`, but that script is currently configured to work
+        only for the rotevol grids.
+
+        Returns
+        -------
+        lengths: pandas DataFrame containing the number of EEPs in each track
+            of the grid.
+        '''
+
         if 'eep' not in self.index.names:
             raise KeyError('Grid is wrong kind. Must be EEP grid.')
 
@@ -115,6 +205,23 @@ class StarGrid(pd.DataFrame):
         return lengths
 
 class StarGridInterpolator(DFInterpolator):
+    '''
+    Stellar model grid interpolator. Built on the DataFrame Interpolator
+    (DFInterpolator) of Tim Morton's isochrones package, the
+    StarGridInterpolator is intended to provide easy interaction with stellar
+    model grids.
+
+    Attributes
+    ----------
+    name (str): name of the grid
+
+    columns (list-like): the available columns in the grid.
+
+    max_eep (int): the maximum EEP index out of all the tracks.
+
+    eep_params (dict): the parameters used to calculate the EEPs.
+    '''
+
     def __init__(self, grid):
         super(StarGridInterpolator, self).__init__(grid)
 
@@ -125,10 +232,49 @@ class StarGridInterpolator(DFInterpolator):
         self.eep_params = grid.eep_params
 
     def get_star_eep(self, index):
+        '''
+        Interpolate a single model from the grid.
+        Note that this is the preferred way to sample models from the grid.
+
+        `index` should be a tuple of indices in the same way you would access
+        a model from a StarGrid. If your grid is indexed by mass and
+        metallicity, and you want the 350th EEP of a 0.987-solar-mass,
+        0.2-metallicity star:
+
+        >>> star = grid.get_star_eep((0.987, 0.2, 350))
+        '''
+
         star_values = self(index)
         return pd.Series(star_values, index=self.columns)
 
     def get_star_age(self, index, age, age_label=None):
+        '''
+        Interpolate a single model from the grid, accessing by age.
+        Note that this method is slower than get_star_eep. get_star_age
+        interpolates an entire track from the grid, then runs a 1-D
+        interpolator over the track to get the parameters for the desired
+        age. get_star_eep is preferred to this method.
+
+        `index` should be a tuple of indices in the same way you would access
+        a model from a StarGrid. If your grid is indexed by mass and
+        metallicity, and you want a a 4.5-Gyr-old, 0.987-solar-mass,
+        0.2-metallicity star:
+
+        >>> star = grid.get_star_age((0.987, 0.2), 4.5)
+
+        Optional Arguments
+        ------------------
+        age_label (str, None): ideally, you should specify what your grid calls
+            age in eep_params in your setup file. If you did, then get_star_age
+            can figure out what to call 'age' from the eep_params that are
+            stored in the interpolator. If you didn't do this, you can specify
+            what your grid calls age using age_label. If grid uses 'Age(Gyr)':
+
+            >>> star = grid.get_star_age(
+                    (0.987, 0.2), 4.5, age_label='Age(Gyr)'
+                )
+        '''
+
         track = self.get_track(index)
         labels = track.columns
         if age_label is None:
@@ -144,20 +290,100 @@ class StarGridInterpolator(DFInterpolator):
         star = pd.Series(interpf(age), labels)
         return star
 
-    def mcmc_star(
-        self, log_prob_fn, args,
-        initial_guess, guess_width,
-        n_walkers=12, n_burnin=0, n_iter=500,
+    def get_track(self, index):
+        '''
+        Interpolate a single track from the model grid.
+
+        `index` should be a tuple of indices in the same way you would access
+        a model from a StarGrid. If your grid is indexed by mass and
+        metallicity, and you want a track for a 0.987-solar-mass,
+        0.2-metallicity star:
+
+        >>> star = grid.get_track((0.987, 0.2))
+        '''
+
+        num_eeps = self.max_eep + 1
+        ones_arr = np.ones(num_eeps)
+        idx = [i*ones_arr for i in index] + [np.arange(num_eeps)]
+        star_values = self(idx)
+        track = StarGrid(star_values, columns=self.columns,
+                         name=self.name, eep_params=self.eep_params)
+        return track
+
+    def mcmc_star(self, log_prob_fn, args,
+        pos0=None, initial_guess=None, guess_width=None,
+        n_walkers=None, n_burnin=0, n_iter=500,
         save_path=None
     ):
+        '''
+        Uses emcee to sample stellar models from the grid.
+        For example usage, see mcmc.ipynb in the parent kiauhoku directory.
 
-        pos0 = np.array([
-            np.random.normal(initial_guess[l], guess_width[l], n_walkers)
-            for l in initial_guess
-        ]).T
+        Parameters
+        ----------
+        log_prob_fn (callable): the log-probability function to be passed
+            to the emcee EnsembleSampler. Should have call signature
+            log_prob_fn(pos, interp, ...), where `pos` is the walker position,
+            `interp` is the StarGridInterpolator, and other arguments can be
+            supplied as needed using `args`.
+            log_prob_fn should return (1), the computed log-probability as a
+            float, and (2), the sampled star model from the interpolator. This
+            allows `blobs` to be used, and for you to keep track other stellar
+            parameters not directly used in the sampling.
+            See the docs for emcee for more advanced usage.
 
-        sampler = emcee.EnsembleSampler(n_walkers, len(initial_guess),
-            log_prob_fn=log_prob_fn, 
+        args (tuple): extra arguments to be passed to log_prob_fn.
+
+        pos0 (numpy ndarray, shape n_dim x n_walkers):
+            You can optionally directly supply the EnsembleSampler the initial
+            walker positions. Alternatively, you can supply a single walker
+            position `initial_guess` and take `n_walkers` samples from a
+            gaussian distribution with width `guess_width`.
+
+        initial_guess (tuple, optional): initial walker position, to be sampled
+            n_walkers times. Use as an alternative to `pos0`.
+
+        guess_width (tuple, optional): width of initial guess sampling. Use as
+            an alternative to `pos0`.
+
+        n_walkers (int, optional): number of walkers. If pos0 is specified,
+            n_walkers is inferred from the shape of pos0. Otherwise,
+            defaults to 12.
+
+        n_burnin (int, optional): number of burn-in steps. Default: 0.
+
+        n_iter (int, optional): number of sample steps. Default: 500.
+
+        save_path (str, optional): You may optionally specify a path to a
+            CSV or Parquet file to save the sampler output as a DataFrame.
+            Use of Parquet requires that you have pyarrow or another parquet-
+            compatible package installed.
+
+        Returns
+        -------
+        sampler, the emcee.EnsembleSampler object
+
+        output, a pandas DataFrame comprised of the flattened Markov chains
+            from the sampler, plus all the stellar parameters returned from
+            each interpolated sample.
+        '''
+
+        if pos0 is None:
+            if n_walkers is None:
+                n_walkers = 12
+
+            pos0 = np.array([
+                np.random.normal(initial_guess[l], guess_width[l], n_walkers)
+                for l in initial_guess
+            ]).T
+
+        elif n_walkers is None:
+            n_walkers = len(pos0)
+
+        sampler = emcee.EnsembleSampler(
+            n_walkers,
+            len(initial_guess),
+            log_prob_fn=log_prob_fn,
             args=(self,) + args,
             vectorize=False,
             blobs_dtype=[('star', pd.Series)]
@@ -188,14 +414,11 @@ class StarGridInterpolator(DFInterpolator):
                     f'    {save_path}\n'
                     'Accepted extensions are .csv and .pqt.'
                 )
+
         return sampler, output
 
-    def fit_star(self, star_dict,
-                 guess, 
-                 bounds,
-                 *args,
-                 loss='meansquarederror',
-                 **kw
+    def fit_star(self, star_dict, guess, bounds, *args,
+                 loss='meansquarederror', **kw
     ):
         '''
         Fit a star from data using scipy.optimize.minimize.
@@ -204,8 +427,8 @@ class StarGridInterpolator(DFInterpolator):
         ----------
         star_dict: dict containing label-value pairs for the star to be fit
 
-        guess: tuple containing initial guess of input values for star. 
-            These should be of the same form as the input to 
+        guess: tuple containing initial guess of input values for star.
+            These should be of the same form as the input to
             StarGridInterpolator.get_star_eep.
 
         bounds: a sequence of (min, max) tuples for each input parameter.
@@ -229,27 +452,61 @@ class StarGridInterpolator(DFInterpolator):
         args = (star_dict, *args)
         result = minimize(loss_function, guess, args=args, bounds=bounds, **kw)
         star = self.get_star_eep(result.x)
-        
-        return star, result   
 
-    def _meansquarederror(self, x, star_dict, scale=False):
-        star = self.get_star_eep(x)
+        return star, result
+
+    def _meansquarederror(self, index, star_dict, scale=False):
+        '''Mean Squared Error loss function for `fit_star`.
+
+        Parameters
+        ----------
+        index (tuple): index to be fit.
+
+        star_dict (dict): dictionary of values for loss function computation.
+
+        scale (list-like, optional): Optionally scale the squared errors before
+            taking the mean. This could be useful if, for example, luminosity is
+            in solar units (~1) and age is in years (~10^9 years).
+
+        Returns
+        -------
+        mean squared error as a float.
+        '''
+
+        star = self.get_star_eep(index)
         sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
-        
+
         if scale:
             sq_err /= np.array(scale)
 
         return np.average(sq_err)
 
-    def _meanpercenterror(self, x, star_dict):
-        star = self.get_star_eep(x)
+    def _meanpercenterror(self, index, star_dict):
+        '''Mean Percent Error loss function for `fit_star`.
+
+        Parameters
+        ----------
+        index (tuple): index to be fit.
+
+        star_dict (dict): dictionary of values for loss function computation.
+
+        Returns
+        -------
+        mean percent error as a float.
+        '''
+
+        star = self.get_star_eep(index)
         mpe = np.average(
-                [np.abs(star[l] - star_dict[l])/star_dict[l] for l in star_dict]
+            [np.abs(star[l] - star_dict[l])/star_dict[l] for l in star_dict]
         )
         return mpe
 
-    def _chisq(self, x, star_dict, err_dict, err='average', return_star=False):
-        star = self.get_star_eep(x)
+    def _chisq(self, index, star_dict, err_dict, 
+        err='average', return_star=False
+    ):
+        '''Convenience routine to compute the chi-squared of a fit.
+        '''
+        star = self.get_star_eep(index)
 
         chisq = 0
         for l in star_dict:
@@ -264,25 +521,26 @@ class StarGridInterpolator(DFInterpolator):
                 uncert = err_dict[l]
 
             chisq += ((star[l] - star_dict[l]) / uncert)**2
-        
+
         if return_star:
             return chisq, star
         return chisq
 
-    def get_track(self, index):
-        num_eeps = self.max_eep + 1
-        ones_arr = np.ones(num_eeps)
-        idx = [i*ones_arr for i in index] + [np.arange(num_eeps)]
-        star_values = self(idx)
-        return StarGrid(star_values, columns=self.columns, name=self.name, eep_params=self.eep_params)
-
     def to_pickle(self, path=None):
+        '''Saves the StarGridInterpolator to a pickle file.
+        '''
         if path is None:
             path = os.path.join(grids_path, self.name, 'interpolator.pkl')
         with open(path, 'wb') as f:
             pickle.dump(self, f)
 
 def load_interpolator(name=None, path=None):
+    '''
+    Load StarGridInterpolator from pickle file. If the interpolator has been
+    cached during the install, simply specifying the name will be enough to
+    load it.
+    '''
+
     if name and path:
         raise ValueError('Please specify only `name` or `path`.')
     elif name:
@@ -296,25 +554,48 @@ def load_interpolator(name=None, path=None):
     return interp
 
 def from_pandas(df, *args, **kwargs):
+    '''Convert pandas DataFrame to StarGrid object.
+    '''
     return StarGrid(df, *args, **kwargs)
 
 def read_pickle(*args, **kwargs):
+    '''Read StarGrid from pickle file.
+    '''
     name = kwargs.pop('name', None)
     df = pd.read_pickle(*args, **kwargs)
     return from_pandas(df, name=name)
 
 def read_csv(*args, **kwargs):
+    '''Read StarGrid from csv.
+    '''
     name = kwargs.pop('name', None)
     df = pd.read_csv(*args, **kwargs)
     return from_pandas(df, name=name)
 
 def read_parquet(*args, **kwargs):
+    '''
+    Read StarGrid from parquet. Requires installation of pyarrow or
+    similar package to support parquet.
+    '''
     name = kwargs.pop('name', None)
     eep_params = kwargs.pop('eep_params', None)
     df = pd.read_parquet(*args, **kwargs)
     return from_pandas(df, name=name, eep_params=eep_params)
 
 def install_grid(script, kind='raw'):
+    '''
+    Installs grid from a user-created setup file. For examples, see
+    *_install.py scripts in the kiauhoku parent directory.
+
+    Installation file must have a variable `name` set to the name of the grid,
+    as well as a function `setup` that returns the set of stellar model grids
+    as a MultiIndexed pandas DataFrame.
+
+    Usage for `rotevol_install.py`:
+        >>> import kiauhoku as kh
+        >>> kh.install_grid('rotevol_install')
+    '''
+
     # For now, MIST only works if the grids are already in EEP basis.
     if 'mist' in script and kind == 'raw':
         raise NotImplementedError(
@@ -324,7 +605,7 @@ def install_grid(script, kind='raw'):
 
     module = import_module(script)
     print(f'Installing grid "{module.name}" from {script}')
-    
+
     # Create cache directories
     path = os.path.join(grids_path, module.name)
     if not os.path.exists(path):
@@ -333,9 +614,9 @@ def install_grid(script, kind='raw'):
     if kind == 'raw':
         eep_params = module.eep_params
         # Cache eep parameters
-        with open(os.path.join(path, 'eep_params.pkl'), 'wb') as f: 
+        with open(os.path.join(path, 'eep_params.pkl'), 'wb') as f:
             pickle.dump(eep_params, f)
-    
+
         print('Reading and combining grid files')
         grids = module.setup()
         grids = from_pandas(grids, name=module.name)
@@ -349,9 +630,9 @@ def install_grid(script, kind='raw'):
             eep_functions = module.eep_functions
         except AttributeError:
             eep_functions = None
-        try: 
+        try:
             metric_function = module.metric_function
-        except:
+        except AttributeError:
             metric_function = None
 
         eeps = grids.to_eep(eep_params, eep_functions, metric_function)
@@ -372,21 +653,31 @@ def install_grid(script, kind='raw'):
     print(f'Model grid "{module.name}" installed.')
 
 def load_full_grid(name):
+    '''Load raw model grid from file.
+    '''
     return load_grid(name, kind='full')
 
 def load_eep_grid(name):
+    '''Load EEP-based model grid from file.
+    '''
     eep_params = load_eep_params(name)
     return load_grid(name, eep_params, kind='eep')
 
 def load_grid(name, eep_params=None, kind='full'):
+    '''Load model grid from file.
+    '''
     file_path = os.path.join(grids_path, name, f'{kind}_grid.pqt')
     if os.path.exists(file_path):
         return read_parquet(file_path, name=name, eep_params=eep_params)
     raise FileNotFoundError(f'{file_path}: No such file exists.')
 
 def load_eep_params(name):
+    '''
+    Assuming EEP params were specified in the setup script and cached,
+    this will load them from the cache by specifying the grid name.
+    '''
     params_path = os.path.join(grids_path, name, 'eep_params.pkl')
-    with open(params_path, 'rb') as f: 
+    with open(params_path, 'rb') as f:
         eep_params = pickle.load(f)
 
     return eep_params

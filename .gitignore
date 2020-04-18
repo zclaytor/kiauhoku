@@ -1,4 +1,5 @@
 __pycache__
+__init__.pyc
 .vscode
 .ipynb_checkpoints
 my_rotevol.py
