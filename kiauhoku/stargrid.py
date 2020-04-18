@@ -143,9 +143,13 @@ class StarGrid(pd.DataFrame):
         if use_pool:
             print('Pooling not yet implemented in <function StarGrid.to_eep>')
 
+        # User can specify eep_params, but if none are specified,
+        # searched for cached params.
         if not eep_params:
             eep_params = load_eep_params(self.name)
 
+        # If self is a MultiIndexed DataFrame, split it into individual
+        # tracks, convert to EEP basis, and recombine.
         if self.is_MultiIndex():
             idx = self.index.droplevel(-1).drop_duplicates()
             if progress:
@@ -155,6 +159,8 @@ class StarGrid(pd.DataFrame):
 
             eep_list = []
             idx_list = []
+
+            # Iterate through tracks
             for i in idx_iter:
                 eep_track = _eep_interpolate(
                     self.loc[i, :],
@@ -165,11 +171,12 @@ class StarGrid(pd.DataFrame):
                 if eep_track is None:
                     continue
                 eep_list.append(eep_track)
-                idx_list += [i + (j_eep,) for j_eep in eep_track.index]
+                idx_list += [(*i, j_eep) for j_eep in eep_track.index]
 
+            # Create MultiIndex for EEP frame
             multiindex = pd.MultiIndex.from_tuples(
                 idx_list,
-                names=idx.names+['eep']
+                names=[*idx.names, 'eep']
             )
 
             eep_frame = pd.concat(eep_list, ignore_index=True)
@@ -368,6 +375,7 @@ class StarGridInterpolator(DFInterpolator):
             each interpolated sample.
         '''
 
+        # If pos0 is not specified, construct it from initial_guess and width
         if pos0 is None:
             if n_walkers is None:
                 n_walkers = 12
@@ -384,25 +392,29 @@ class StarGridInterpolator(DFInterpolator):
             n_walkers,
             len(initial_guess),
             log_prob_fn=log_prob_fn,
-            args=(self,) + args,
+            args=(self, *args),
             vectorize=False,
             blobs_dtype=[('star', pd.Series)]
         )
 
+        # Run burn-in stage
         if n_burnin > 0:
             pos, prob, state, blobs = sampler.run_mcmc(pos0, n_burnin, progress=True)
             sampler.reset()
         else:
             pos = pos0
 
+        # Run sampling stage
         pos, prob, state, blobs = sampler.run_mcmc(pos, n_iter, progress=True)
 
         samples = pd.DataFrame(sampler.flatchain, columns=initial_guess.keys())
         blobs = sampler.get_blobs(flat=True)
         blobs = pd.concat(blobs['star'], axis=1).T
 
+        # Concatenate Markov chains with blobs
         output = pd.concat([samples, blobs], axis=1)
 
+        # Save output if desired
         if save_path:
             if 'csv' in save_path:
                 output.to_csv(save_path, index=False)
@@ -621,6 +633,7 @@ def install_grid(script, kind='raw'):
         grids = module.setup()
         grids = from_pandas(grids, name=module.name)
 
+        # Save full grid to file
         full_save_path = os.path.join(path, 'full_grid.pqt')
         print(f'Saving to {full_save_path}')
         grids.to_parquet(full_save_path)
@@ -641,10 +654,12 @@ def install_grid(script, kind='raw'):
         eeps = module.setup()
         eeps = from_pandas(eeps, name=module.name)
 
+    # Save EEP grid to file
     eep_save_path = os.path.join(path, 'eep_grid.pqt')
     print(f'Saving to {eep_save_path}')
     eeps.to_parquet(eep_save_path)
 
+    # Create and save interpolator to file
     interp = StarGridInterpolator(eeps)
     interp_save_path = os.path.join(path, 'interpolator.pkl')
     print(f'Saving interpolator to {interp_save_path}')

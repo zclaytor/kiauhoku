@@ -64,12 +64,15 @@ def _eep_interpolate(track, eep_params, eep_functions, metric_function=None):
 
     if metric_function is None:
         metric_function = _HRD_distance
-        
-    dist = metric_function(track, eep_params) # compute metric distance along track
+
+    # compute metric distance along track
+    dist = metric_function(track, eep_params)
 
     primary_eep_dist = dist[i_eep]
     eep_intervals = eep_params['intervals']
-    secondary_eep_dist = np.zeros(sum(eep_intervals[:num_intervals]) + len(i_eep))
+    secondary_eep_dist = np.zeros(
+        sum(eep_intervals[:num_intervals]) + len(i_eep)
+    )
 
     # Determine appropriate distance to each secondary EEP
     j0 = 0
