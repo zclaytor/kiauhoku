@@ -489,7 +489,7 @@ class StarGridInterpolator(DFInterpolator):
         sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
 
         if scale:
-            sq_err /= np.array(scale)
+            sq_err /= np.array(scale)**2
 
         return np.average(sq_err)
 
