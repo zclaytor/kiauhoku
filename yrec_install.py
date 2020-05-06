@@ -147,7 +147,9 @@ def all_from_yrec(progress=True):
         df_list.append(from_yrec(fpath))
 
     dfs = pd.concat(df_list).sort_index()
-
+    # If you want to compute a total hydrogen luminosity, uncomment the next line
+    #dfs[eep_params['hydrogen lum']] = dfs[['ppI', 'ppII', 'ppIII']].sum(axis=1)
+    
     return dfs 
 
 def setup():
