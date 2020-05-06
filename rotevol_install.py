@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from kiauhoku import stargrid
-
 
 name = 'fastlaunch'
 path_to_raw_grids = 'path/to/raw/grids'

@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from kiauhoku import stargrid
 
 name = 'yrec'
 col_name = 'column_labels.txt'
@@ -149,7 +148,7 @@ def all_from_yrec(progress=True):
     dfs = pd.concat(df_list).sort_index()
     # If you want to compute a total hydrogen luminosity, uncomment the next line
     #dfs[eep_params['hydrogen lum']] = dfs[['ppI', 'ppII', 'ppIII']].sum(axis=1)
-    
+
     return dfs 
 
 def setup():
