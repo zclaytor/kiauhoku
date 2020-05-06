@@ -252,7 +252,12 @@ class StarGridInterpolator(DFInterpolator):
         '''
 
         star_values = self(index)
-        return pd.Series(star_values, index=self.columns)
+        if len(np.shape(index)) == 1:
+            star = pd.Series(star_values, index=self.columns)
+        else:
+            star = pd.DataFrame(star_values, columns=self.columns)
+
+        return star
 
     def get_star_age(self, index, age, age_label=None):
         '''
@@ -320,7 +325,7 @@ class StarGridInterpolator(DFInterpolator):
     def mcmc_star(self, log_prob_fn, args,
         pos0=None, initial_guess=None, guess_width=None,
         n_walkers=None, n_burnin=0, n_iter=500,
-        save_path=None
+        save_path=None, **kw,
     ):
         '''
         Uses emcee to sample stellar models from the grid.
@@ -366,6 +371,8 @@ class StarGridInterpolator(DFInterpolator):
             Use of Parquet requires that you have pyarrow or another parquet-
             compatible package installed.
 
+        kw: Extra keyword arguments to pass to the EnsembleSampler.
+
         Returns
         -------
         sampler, the emcee.EnsembleSampler object
@@ -393,8 +400,8 @@ class StarGridInterpolator(DFInterpolator):
             len(initial_guess),
             log_prob_fn=log_prob_fn,
             args=(self, *args),
-            vectorize=False,
-            blobs_dtype=[('star', pd.Series)]
+            blobs_dtype=[('star', pd.Series)],
+            **kw,
         )
 
         # Run burn-in stage
