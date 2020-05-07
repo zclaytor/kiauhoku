@@ -161,13 +161,10 @@ def get_ZAMS(track, eep_params, i0=10, ZAMS_pref=3, Xc_burned=0.001,
     ZAMS3 is implemented by default.
     '''
     core_hydrogen_frac = eep_params['core_hydrogen_frac']
-    hydrogen_lum = eep_params['hydrogen_lum']
-    lum = eep_params['lum']
-    logg = eep_params['logg']
-
     Xc_init = track.at[0, core_hydrogen_frac]
     Xc_tr = track.loc[i0:, core_hydrogen_frac]
     ZAMS1 = _first_true_index(Xc_tr <= Xc_init-Xc_burned)
+
     if ZAMS1 == -1:
         return -1
 
@@ -175,6 +172,9 @@ def get_ZAMS(track, eep_params, i0=10, ZAMS_pref=3, Xc_burned=0.001,
         return ZAMS1
 
     if ZAMS_pref == 2:
+        hydrogen_lum = eep_params['hydrogen_lum']
+        lum = eep_params['lum']
+
         Hlum_tr = track.loc[i0:ZAMS1, hydrogen_lum]
         lum_tr = track.loc[i0:ZAMS1, lum]
         Hlum_frac = Hlum_tr/lum_tr
@@ -183,6 +183,8 @@ def get_ZAMS(track, eep_params, i0=10, ZAMS_pref=3, Xc_burned=0.001,
             return ZAMS1
         return ZAMS2
 
+    # or ZAMS_pref = 3
+    logg = eep_params['logg']
     logg_tr = track.loc[0:ZAMS1, logg]
     ZAMS3 = logg_tr.idxmax()
     return ZAMS3
