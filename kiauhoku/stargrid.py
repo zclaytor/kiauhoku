@@ -398,7 +398,7 @@ class StarGridInterpolator(DFInterpolator):
         sampler = emcee.EnsembleSampler(
             n_walkers,
             len(initial_guess),
-            log_prob_fn=log_prob_fn,
+            log_prob_fn,
             args=(self, *args),
             blobs_dtype=[('star', pd.Series)],
             **kw,

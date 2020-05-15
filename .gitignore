@@ -2,6 +2,7 @@ __pycache__
 __init__.pyc
 .vscode
 .ipynb_checkpoints
+kiauhoku.egg-info
 my_rotevol.py
 my_mist.py
 my_yrec.py
