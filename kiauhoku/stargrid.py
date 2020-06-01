@@ -234,6 +234,7 @@ class StarGridInterpolator(DFInterpolator):
 
         self.name = grid.name
         self.columns = grid.columns
+        self.index = grid.index
 
         self.max_eep = grid.index.to_frame().eep.max()
         self.eep_params = grid.eep_params
@@ -352,11 +353,13 @@ class StarGridInterpolator(DFInterpolator):
             position `initial_guess` and take `n_walkers` samples from a
             gaussian distribution with width `guess_width`.
 
-        initial_guess (dict, optional): initial walker position, to be sampled
-            n_walkers times. Use as an alternative to `pos0`.
+        initial_guess (tuple, optional): initial walker position, to be sampled
+            n_walkers times. Should be the same shape as the model grid index.
+            Use as an alternative to `pos0`.
 
-        guess_width (dict, optional): width of initial guess sampling. Use as
-            an alternative to `pos0`.
+        guess_width (tuple, optional): width of initial guess sampling. Should
+            be the same shape as the model grid index. Use as an alternative 
+            to `pos0`.
 
         n_walkers (int, optional): number of walkers. If pos0 is specified,
             n_walkers is inferred from the shape of pos0. Otherwise,
@@ -388,8 +391,8 @@ class StarGridInterpolator(DFInterpolator):
                 n_walkers = 12
 
             pos0 = np.array([
-                np.random.normal(initial_guess[l], guess_width[l], n_walkers)
-                for l in initial_guess
+                np.random.normal(guess, width, n_walkers)
+                for guess, width in zip(initial_guess, guess_width)
             ]).T
 
         elif n_walkers is None:
@@ -414,7 +417,7 @@ class StarGridInterpolator(DFInterpolator):
         # Run sampling stage
         pos, prob, state, blobs = sampler.run_mcmc(pos, n_iter, progress=True)
 
-        samples = pd.DataFrame(sampler.flatchain, columns=initial_guess.keys())
+        samples = pd.DataFrame(sampler.flatchain, columns=self.index.names)
         blobs = sampler.get_blobs(flat=True)
         blobs = pd.concat(blobs['star'], axis=1).T
 
