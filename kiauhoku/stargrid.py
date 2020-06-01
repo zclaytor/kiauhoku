@@ -352,10 +352,10 @@ class StarGridInterpolator(DFInterpolator):
             position `initial_guess` and take `n_walkers` samples from a
             gaussian distribution with width `guess_width`.
 
-        initial_guess (tuple, optional): initial walker position, to be sampled
+        initial_guess (dict, optional): initial walker position, to be sampled
             n_walkers times. Use as an alternative to `pos0`.
 
-        guess_width (tuple, optional): width of initial guess sampling. Use as
+        guess_width (dict, optional): width of initial guess sampling. Use as
             an alternative to `pos0`.
 
         n_walkers (int, optional): number of walkers. If pos0 is specified,
