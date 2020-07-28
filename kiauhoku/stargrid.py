@@ -191,6 +191,17 @@ class StarGrid(pd.DataFrame):
 
         return eep_frame
 
+    def get_primary_eeps(self):
+        '''Return indices of Primary EEPs in the EEP-based tracks.
+        '''
+        if 'eep' not in self.index.names:
+            raise RuntimeError('Grid is wrong kind. Must be EEP grid.')
+
+        ints = [0] + self.eep_params['intervals']
+        eeps = np.arange(len(ints)) + np.cumsum(ints)
+        
+        return eeps
+
     def get_eep_track_lengths(self):
         '''
         This is mainly a convenience function to be used in the script
@@ -204,7 +215,7 @@ class StarGrid(pd.DataFrame):
         '''
 
         if 'eep' not in self.index.names:
-            raise KeyError('Grid is wrong kind. Must be EEP grid.')
+            raise RuntimeError('Grid is wrong kind. Must be EEP grid.')
 
         idx = self.index.droplevel('eep').drop_duplicates()
         lengths = [len(self.loc[i]) for i in idx]
@@ -238,6 +249,14 @@ class StarGridInterpolator(DFInterpolator):
 
         self.max_eep = grid.index.to_frame().eep.max()
         self.eep_params = grid.eep_params
+
+    def get_primary_eeps(self):
+        '''Return indices of Primary EEPs in the EEP-based tracks.
+        '''
+        ints = [0] + self.eep_params['intervals']
+        eeps = np.arange(len(ints)) + np.cumsum(ints)
+        
+        return eeps
 
     def get_star_eep(self, index):
         '''
@@ -685,13 +704,18 @@ def load_full_grid(name):
 def load_eep_grid(name):
     '''Load EEP-based model grid from file.
     '''
-    eep_params = load_eep_params(name)
-    return load_grid(name, eep_params, kind='eep')
+    return load_grid(name, kind='eep')
 
-def load_grid(name, eep_params=None, kind='full'):
+def load_grid(name, kind='full'):
     '''Load model grid from file.
     '''
     file_path = os.path.join(grids_path, name, f'{kind}_grid.pqt')
+
+    if kind == 'eep':
+        eep_params = load_eep_params(name)
+    else:
+        eep_params = None
+
     if os.path.exists(file_path):
         return read_parquet(file_path, name=name, eep_params=eep_params)
     raise FileNotFoundError(f'{file_path}: No such file exists.')
