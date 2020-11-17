@@ -1,20 +1,12 @@
 import os
+import pickle
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 
-name = 'yrec'
-col_name = 'column_labels.txt'
-
-path_to_raw_grids = 'path/to/raw/grids'
-col_path = os.path.join(path_to_raw_grids, col_name)
-
-filelist = [f for f in os.listdir(path_to_raw_grids) if '.track' in f]
-
 # Assign labels used in eep conversion
 eep_params = dict(
-    name = name,
     age = 'Age(Gyr)',
     log_central_temp = 'logT(cen)',
     core_hydrogen_frac = 'Xcen',
@@ -86,12 +78,9 @@ def my_HRD(track, eep_params):
 
     return dist
 
-eep_functions = {'rgbump': my_RGBump}
-metric_function = my_HRD
-
 def read_columns(path):
     with open(path, 'r') as f:
-        columns = [l.strip() for l in f.readlines()]
+        columns = [l.strip() for l in f]
     
     return columns
 
@@ -115,9 +104,10 @@ def parse_filename(filename):
 
 def from_yrec(path, columns=None):
     if columns is None:
-        columns = read_columns(col_path)
+        raw_grids_path = os.path.dirname(path)
+        columns = read_columns(os.path.join(raw_grids_path, 'column_labels.txt'))
 
-    fname = path.split('/')[-1]
+    fname = os.path.basename(path)
     initial_mass, initial_met, initial_alpha = parse_filename(fname)
 
     data = np.loadtxt(path)
@@ -133,8 +123,10 @@ def from_yrec(path, columns=None):
 
     return df
 
-def all_from_yrec(progress=True):
+def all_from_yrec(raw_grids_path, progress=True):
     df_list = []
+    filelist = [f for f in os.listdir(raw_grids_path) if '.track' in f]
+    columns = read_columns(os.path.join(raw_grids_path, 'column_labels.txt'))
 
     if progress:
         file_iter = tqdm(filelist)
@@ -142,8 +134,8 @@ def all_from_yrec(progress=True):
         file_iter = filelist
 
     for fname in file_iter:
-        fpath = os.path.join(path_to_raw_grids, fname)
-        df_list.append(from_yrec(fpath))
+        fpath = os.path.join(raw_grids_path, fname)
+        df_list.append(from_yrec(fpath, columns))
 
     dfs = pd.concat(df_list).sort_index()
     # If you want to compute a total hydrogen luminosity, uncomment the next line
@@ -151,8 +143,83 @@ def all_from_yrec(progress=True):
 
     return dfs 
 
-def setup():
-    return all_from_yrec()
+def install(
+    raw_grids_path,
+    name=None,
+    eep_params=eep_params,
+    eep_functions={'rgbump': my_RGBump},
+    metric_function=my_HRD,
+    ):
+    '''
+    The main method to install grids that are output of the `rotevol` rotational
+    evolution tracer code.
 
-if __name__ == '__main__':
-    df = setup()    
+    Parameters
+    ----------
+    raw_grids_path (str): the path to the folder containing the raw model grids.
+
+    name (str, optional): the name of the grid you're installing. By default,
+        the basename of the `raw_grids_path` will be used.
+
+    eep_params (dict, optional): contains a mapping from your grid's specific
+        column names to the names used by kiauhoku's default EEP functions.
+        It also contains 'eep_intervals', the number of secondary EEPs
+        between each consecutive pair of primary EEPs. By default, the params
+        defined at the top of this script will be used, but users may specify
+        their own.
+
+    eep_functions (dict, optional): if the default EEP functions won't do the
+        job, you can specify your own and supply them in a dictionary.
+        EEP functions must have the call signature
+        function(track, eep_params), where `track` is a single track.
+        If none are supplied, the default functions will be used.
+
+    metric_function (callable, None): the metric function is how the EEP
+        interpolator spaces the secondary EEPs. By default, the path
+        length along the evolution track on the H-R diagram (luminosity vs.
+        Teff) is used, but you can specify your own if desired.
+        metric_function must have the call signature
+        function(track, eep_params), where `track` is a single track.
+        If no function is supplied, defaults to yrec.my_HRD.
+
+    Returns None
+    '''
+    from .stargrid import from_pandas, StarGridInterpolator
+    from .stargrid import grids_path as install_path
+
+    if name is None:
+        name = os.path.basename(raw_grids_path)
+
+    # Create cache directories
+    path = os.path.join(install_path, name)
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    # Cache eep parameters
+    with open(os.path.join(path, 'eep_params.pkl'), 'wb') as f:
+        pickle.dump(eep_params, f)
+
+    print('Reading and combining grid files')
+    grids = all_from_yrec(raw_grids_path)
+    grids = from_pandas(grids, name=name)
+
+    # Save full grid to file
+    full_save_path = os.path.join(path, 'full_grid.pqt')
+    print(f'Saving to {full_save_path}')
+    grids.to_parquet(full_save_path)
+
+    print(f'Converting to eep-based tracks')
+    eeps = grids.to_eep(eep_params, eep_functions, metric_function)
+
+    # Save EEP grid to file
+    eep_save_path = os.path.join(path, 'eep_grid.pqt')
+    print(f'Saving to {eep_save_path}')
+    eeps.to_parquet(eep_save_path)
+
+    # Create and save interpolator to file
+    interp = StarGridInterpolator(eeps)
+    interp_save_path = os.path.join(path, 'interpolator.pkl')
+    print(f'Saving interpolator to {interp_save_path}')
+    interp.to_pickle(path=interp_save_path)
+
+    print(f'Model grid "{name}" installed.')   
