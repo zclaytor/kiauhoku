@@ -9,7 +9,7 @@ Download the model grids from [Google Drive][google drive].
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
 University of Hawaiʻi  
-2020 November 13
+2020 April 1
 
 Kīauhōkū  
 From Hawaiian:  
@@ -18,7 +18,10 @@ From Hawaiian:
 
 This name was created in partnership with Dr. Larry Kimura and Bruce Torres Fischer, a student participant in *A Hua He Inoa*, a program to bring Hawaiian naming practices to new astronomical discoveries. We are grateful for their collaboration.
 
-Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. It was designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of [van Saders et al. (2013)][van Saders], but other stellar evolution model grids are available. 
+Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. In its current version, it is designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of [van Saders et al. (2013)][van Saders]. 
+
+I am currently in the process of adapting the code to work with a wider range of stellar evolution models, so stay tuned!
+
 
 Kīauhōkū requires the use of Python 3 and uses the following Python packages:  
 - numpy  
@@ -31,11 +34,17 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 - [isochrones][isochrones]
 
 
+## Space Requirements
+The raw model files take up 4.1 GB of space. Once individually pickled and condensed to the EEP basis, the whole set of models + pickled interpolator takes up roughly 5.5 GB.
+
+When loaded into memory, the Grid interpolator takes up ~200 MB of RAM.
+
+
 ## Installation
 ```bash
 git clone https://github.com/zclaytor/kiauhoku
 cd kiauhoku
-pip install -e .
+pip install .
 ```
 
 
@@ -53,7 +62,7 @@ kh.install_grid('rotevol_install')
 
 ## How it works
 
-We start with output evolution tracks from your favorite stellar modeling software. For `rotevol` output, these are the \*.out files. Each \*.out file has, for one specific initial metallicity and alpha-abundance, a series of evolution tracks for a range of initial masses. The "fastlaunch" grid for `kiauhoku` has eight \*.out files, corresponding to  
+We start with output evolution tracks from your favorite stellar modeling software. For `rotevol` output, these are the \*.out files. Each \*.out file has, for one specific initial metallicity and alpha-abundance, a series of evolution tracks for a range of initial masses. The default grid for `kiauhoku` has eight \*.out files, corresponding to  
 [M/H] ~ [-1.0, -0.5, 0.0, 0.5] and  
 [alpha/M] ~ [0.0, 0.4].  
 Each file contains 171 evolution tracks for 0.30 <= M/Msun <= 2.00 in steps of 0.01\*Msun.
