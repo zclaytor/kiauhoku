@@ -35,7 +35,7 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 
 Personally, I create a conda environment for this. In this example I'll call it "stars".
 ```bash
-conda create -n stars numpy scipy pandas matplotlib tqdm pyarrow emcee
+conda create -n stars numpy scipy pandas matplotlib tqdm pyarrow numba emcee
 conda activate stars
 pip install isochrones git+https://github.com/zclaytor/kiauhoku
 ```
