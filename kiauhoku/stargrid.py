@@ -16,16 +16,8 @@ from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 import emcee
 
-try:
-    from isochrones.interp import DFInterpolator
-except ImportError:
-    print(
-        'Use of kiauhoku requires installation of isochrones:\n'
-        'https://isochrones.readthedocs.io/en/latest/install.html\n'
-    )
-    raise
-
 from .eep import _eep_interpolate
+from .interp import DFInterpolator
 
 
 grids_path = os.path.expanduser('~/') + '.kiauhoku/grids/'

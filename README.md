@@ -29,15 +29,14 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 - matplotlib  
 - tqdm
 - pyarrow (or some package that supports parquet files)
-- numba (for isochrones)
-- [emcee][emcee]  
-- [isochrones][isochrones]
+- numba
+- [emcee][emcee]
 
 Personally, I create a conda environment for this. In this example I'll call it "stars".
 ```bash
 conda create -n stars numpy scipy pandas matplotlib tqdm pyarrow numba emcee
 conda activate stars
-pip install isochrones git+https://github.com/zclaytor/kiauhoku
+pip install git+https://github.com/zclaytor/kiauhoku
 ```
 
 ## I don't care about the documentation. Just let me get started!
@@ -67,7 +66,7 @@ Each file contains 171 evolution tracks for 0.30 <= M/Msun <= 2.00 in steps of 0
 
 2. Age is not an optimal dimension for comparing consecutive evolution tracks. For this reason we condense each evolution track in the time domain to a series of Equivalent Evolutionary Phases (EEPs) after the method of Dotter (2016). The EEP-based tracks are packaged into a MultiIndexed DataFrame and saved to parquet.
 
-3. We finally load the EEP-based tracks into a `kiauhoku.stargrid.StarGridInterpolator` object. The `StarGridInterpolator` is based on the DataFrameInterpolator (`DFInterpolator`) from Tim Morton's `isochrones` package. It performs linear interpolation between consecutive evolution tracks for an input mass, metallicity, alpha-abundance, and either age or EEP-index. We then pickle the interpolator so it can be accessed quickly and easily.
+3. We finally load the EEP-based tracks into a `kiauhoku.stargrid.StarGridInterpolator` object. The `StarGridInterpolator` is based on the DataFrameInterpolator (`DFInterpolator`) from Tim Morton's [`isochrones`][isochrones] package. It performs linear interpolation between consecutive evolution tracks for an input mass, metallicity, alpha-abundance, and either age or EEP-index. We then pickle the interpolator so it can be accessed quickly and easily.
 
 
 ## Basic Usage
