@@ -636,11 +636,6 @@ def install_grid(script, kind='raw'):
         >>> import kiauhoku as kh
         >>> kh.install_grid('rotevol_install')
     '''
-    raise DeprecationWarning(
-        '`kiauhoku.stargrid.install_grid` is deprecated for use with built-in '
-        'grids. You may still use it with custom grids, but see individual '
-        'grid modules (e.g., kiauhoku.mist) for built-ins.'
-    )
 
     # For now, MIST only works if the grids are already in EEP basis.
     if 'mist' in script and kind == 'raw':

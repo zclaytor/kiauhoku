@@ -20,6 +20,8 @@ This name was created in partnership with Dr. Larry Kimura and Bruce Torres Fisc
 
 Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. It was designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of [van Saders et al. (2013)][van Saders], but other stellar evolution model grids are available. 
 
+## Installation
+
 Kīauhōkū requires the use of Python 3 and uses the following Python packages:  
 - numpy  
 - scipy  
@@ -27,29 +29,32 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 - matplotlib  
 - tqdm
 - pyarrow (or some package that supports parquet files)
+- numba (for isochrones)
 - [emcee][emcee]  
 - [isochrones][isochrones]
 
-
-## Installation
+Personally, I create a conda environment for this. In this example I'll call it "stars".
 ```bash
-git clone https://github.com/zclaytor/kiauhoku
-cd kiauhoku
-pip install -e .
+conda create -n stars numpy scipy pandas matplotlib tqdm pyarrow emcee
+conda activate stars
+pip install isochrones git+https://github.com/zclaytor/kiauhoku
 ```
-
 
 ## I don't care about the documentation. Just let me get started!
-1. The parent directory contains a set of install scripts for the model grids. Download the model grids from [Google Drive][google drive], then check the first few lines of the install script, including the path to the grids and the names of the eep_params (which are grid dependent).
+1. Download the model grids from [Google Drive][google drive].
 
-2. Open an interactive Python session in the directory with the install script. Do the following (this example uses 'rotevol_fastlaunch.py' as the install script):
+2. Open an interactive Python session in the directory with the install script. Here we'll install the "fastlaunch" grid, which is a YREC grid that's been processed with the Rotevol rotation tracer code:
 ```python
-import kiauhoku as kh
-kh.install_grid('rotevol_install')
+from kiauhoku import rotevol
+path_to_grid = wherever_you_installed_grids + '/grids/fastlaunch'
+rotevol.install(path_to_grid)
 ```
 
-3. You're ready to go! You can run `grid = kh.load_interpolator('fastlaunch')` and interpolate away.
-
+3. You're ready to go! You can import interpolate away.
+```python
+import kiauhoku as kh
+grid = kh.load_interpolator('fastlaunch')
+```
 
 ## How it works
 
@@ -81,16 +86,16 @@ Kīauhōkū comes with MCMC functionality through `emcee`. See the jupyter noteb
    
 ## Installing Custom Model Grids
 
-To install your own custom grid, you will want to create a setup script (see `rotevol_install.py`, `yrec_install.py`, or `mist_intall.py` for examples). The only requirements are that your setup file contains (1) a function called `setup` that returns a pandas MultiIndexed DataFrame containing all your evolution tracks, and (2) a variable `name` that is set to whatever you want your installed grid to be named.
+To install your own custom grid, you will want to create a setup script (see `custom_install.py` for an example). The only requirements are that your setup file contains (1) a function called `setup` that returns a pandas MultiIndexed DataFrame containing all your evolution tracks, and (2) a variable `name` that is set to whatever you want your installed grid to be named.
 
 The index for this DataFrame is what all the "get" functions will use to get and interpolate tracks and EEPs. Thus, if you want to access your grid using mass and metallicity, you'll want the DataFrame returned by `setup` to have mass and metallicity, as well as a column to represent the time step.
 
-You can also use the setup file to define custom EEP functions (see `yrec_install.my_RGBump`) for an example) and to tell `kiauhoku` which columns to use in its default EEP functions.
+You can also use the setup file to define custom EEP functions (see `custom_install.my_RGBump`) for an example) and to tell `kiauhoku` which columns to use in its default EEP functions.
 
-Once your setup file (let's call it `my_setup.py`), you can install your custom grid using
+Once your setup file is ready, you can install your custom grid using
 ```python
 import kiauhoku as kh
-kh.install_grid('my_setup')
+kh.install_grid('custom_install')
 ```
 
 If you create a setup file for your favorite model grid and you'd like it to be public, create a pull request and I'll add you as a contributor!
