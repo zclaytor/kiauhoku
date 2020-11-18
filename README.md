@@ -9,7 +9,7 @@ Download the model grids from [Google Drive][google drive].
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
 University of Hawaiʻi  
-2020 November 13
+2020 November 18
 
 Kīauhōkū  
 From Hawaiian:  
@@ -38,6 +38,12 @@ conda create -n stars numpy scipy pandas matplotlib tqdm pyarrow numba emcee
 conda activate stars
 pip install git+https://github.com/zclaytor/kiauhoku
 ```
+
+Brand new: Kīauhōkū is on PyPI! It requires Python 3.8 or less, but you can finally do this:
+```bash
+pip install kiauhoku
+```
+You still need to download the grids from Google Drive and follow grid-specific install instructions. I'm working on including the basic files with the pip install.
 
 ## I don't care about the documentation. Just let me get started!
 1. Download the model grids from [Google Drive][google drive].
