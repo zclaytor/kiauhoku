@@ -183,6 +183,13 @@ class StarGrid(pd.DataFrame):
 
         return eep_frame
 
+    def to_interpolator(self):
+        '''Converts EEP-based grid to StarGridInterpolator.
+        '''
+        if 'eep' not in self.index.names:
+            raise RuntimeError('Grid is wrong kind. Must be EEP grid.')
+        return StarGridInterpolator(self)        
+
     def get_primary_eeps(self):
         '''Return indices of Primary EEPs in the EEP-based tracks.
         '''
@@ -591,21 +598,21 @@ def from_pandas(df, *args, **kwargs):
     '''
     return StarGrid(df, *args, **kwargs)
 
-def read_pickle(*args, **kwargs):
+def from_pickle(*args, **kwargs):
     '''Read StarGrid from pickle file.
     '''
     name = kwargs.pop('name', None)
     df = pd.read_pickle(*args, **kwargs)
     return from_pandas(df, name=name)
 
-def read_csv(*args, **kwargs):
+def from_csv(*args, **kwargs):
     '''Read StarGrid from csv.
     '''
     name = kwargs.pop('name', None)
     df = pd.read_csv(*args, **kwargs)
     return from_pandas(df, name=name)
 
-def read_parquet(*args, **kwargs):
+def from_parquet(*args, **kwargs):
     '''
     Read StarGrid from parquet. Requires installation of pyarrow or
     similar package to support parquet.
@@ -681,36 +688,43 @@ def install_grid(script, kind='raw'):
     eeps.to_parquet(eep_save_path)
 
     # Create and save interpolator to file
-    interp = StarGridInterpolator(eeps)
+    interp = eeps.to_interpolator()
     interp_save_path = os.path.join(path, 'interpolator.pkl')
     print(f'Saving interpolator to {interp_save_path}')
     interp.to_pickle(path=interp_save_path)
 
     print(f'Model grid "{module.name}" installed.')
 
-def load_full_grid(name):
+def load_full_grid(path=None, name=None):
     '''Load raw model grid from file.
     '''
-    return load_grid(name, kind='full')
+    return load_grid(path=path, name=name, kind='full')
 
-def load_eep_grid(name):
+def load_eep_grid(path=None, name=None):
     '''Load EEP-based model grid from file.
     '''
-    return load_grid(name, kind='eep')
+    return load_grid(path=path, name=name, kind='eep')
 
-def load_grid(name, kind='full'):
+def load_grid(path=None, name=None, kind='full'):
     '''Load model grid from file.
     '''
-    file_path = os.path.join(grids_path, name, f'{kind}_grid.pqt')
+    if path:
+        file_path = path
+        if name:
+            print('`kiauhoku.stargrid.load_grid`: `path` is specified; ignoring `name`.')
+        else:
+            name = os.path.basename(os.path.dirname(path))
+    elif name:
+        file_path = os.path.join(grids_path, name, f'{kind}_grid.pqt')
 
-    if kind == 'eep':
+    if (kind == 'eep') or ('eep' in file_path):
         eep_params = load_eep_params(name)
     else:
         eep_params = None
 
     if os.path.exists(file_path):
-        return read_parquet(file_path, name=name, eep_params=eep_params)
-    raise FileNotFoundError(f'{file_path}: No such file exists.')
+        return from_parquet(file_path, name=name, eep_params=eep_params)
+    raise FileNotFoundError(f"No such file or directory: '{file_path}'")
 
 def load_eep_params(name):
     '''
