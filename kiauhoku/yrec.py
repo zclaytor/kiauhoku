@@ -184,7 +184,7 @@ def install(
 
     Returns None
     '''
-    from .stargrid import from_pandas, StarGridInterpolator
+    from .stargrid import from_pandas
     from .stargrid import grids_path as install_path
 
     if name is None:
@@ -217,7 +217,7 @@ def install(
     eeps.to_parquet(eep_save_path)
 
     # Create and save interpolator to file
-    interp = StarGridInterpolator(eeps)
+    interp = eeps.to_interpolator()
     interp_save_path = os.path.join(path, 'interpolator.pkl')
     print(f'Saving interpolator to {interp_save_path}')
     interp.to_pickle(path=interp_save_path)
