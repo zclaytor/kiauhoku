@@ -21,6 +21,7 @@ from .interp import DFInterpolator
 
 
 grids_path = os.path.expanduser('~/') + '.kiauhoku/grids/'
+interp_path = os.path.expanduser('~/') + '.kiauhoku/interpolators/'
 
 class StarGrid(pd.DataFrame):
     '''
@@ -585,10 +586,13 @@ def load_interpolator(name=None, path=None):
         raise ValueError('Please specify only `name` or `path`.')
     elif name:
         path = os.path.join(grids_path, name, 'interpolator.pkl')
-    elif path:
-        pass
-    else:
+        if not os.path.exists(path):
+            path = os.path.join(interp_path, f'{name}.pkl')
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"No interpolator found named '{name}'")
+    elif not path:
         raise ValueError('Specify `name` or `path`.')
+    
     with open(path, 'rb') as f:
         interp = pickle.load(f)
     return interp
