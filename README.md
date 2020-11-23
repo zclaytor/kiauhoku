@@ -9,7 +9,7 @@ Download the model grids from [Google Drive][google drive].
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
 University of Hawaiʻi  
-2020 November 18
+2020 November 23
 
 Kīauhōkū  
 From Hawaiian:  
@@ -55,7 +55,7 @@ path_to_grid = wherever_you_installed_grids + '/grids/fastlaunch'
 rotevol.install(path_to_grid)
 ```
 
-3. You're ready to go! You can import interpolate away.
+3. You're ready to go! You can import and interpolate away.
 ```python
 import kiauhoku as kh
 grid = kh.load_interpolator('fastlaunch')
@@ -93,7 +93,7 @@ Kīauhōkū comes with MCMC functionality through `emcee`. See the jupyter noteb
 
 To install your own custom grid, you will want to create a setup script (see `custom_install.py` for an example). The only requirements are that your setup file contains (1) a function called `setup` that returns a pandas MultiIndexed DataFrame containing all your evolution tracks, (2) a variable `name` that is set to whatever you want your installed grid to be named, and (3) a variable `raw_grids_path` that sets the path to wherever your custom raw grid is downloaded.
 
-The index for this DataFrame is what all the "get" functions will use to get and interpolate tracks and EEPs. Thus, if you want to access your grid using mass and metallicity, you'll want the DataFrame returned by `setup` to have mass and metallicity, as well as a column to represent the time step.
+The index for this DataFrame is what all the "get" functions will use to get and interpolate tracks and EEPs. Thus, if you want to access your grid using mass and metallicity, you'll want the DataFrame returned by `setup` to have mass and metallicity, as well as a column to represent the time/EEP step.
 
 You can also use the setup file to define custom EEP functions (see `custom_install.my_RGBump`) for an example) and to tell `kiauhoku` which columns to use in its default EEP functions.
 
