@@ -33,6 +33,20 @@ def my_PreMS(track, eep_params, i0=None):
     '''
     return 0
 
+def my_TAMS(track, eep_params, i0, Xmin=1e-5):
+    '''
+    By default, the TAMS is defined as the first point in the track where Xcen
+    drops below 10^-12. But not all the DSEP tracks hit this value. To ensure
+    the TAMS is placed correctly, here I'm using Xcen = 10^-5 as the critical
+    value.
+    '''
+    core_hydrogen_frac = eep_params['core_hydrogen_frac']
+    Xc_tr = track.loc[i0:, core_hydrogen_frac]
+    below_crit = Xc_tr <= Xmin
+    if not below_crit.any():
+        return -1
+    return below_crit.idxmax()
+
 def my_RGBump(track, eep_params, i0=None):
     '''
     Modified from eep.get_RGBump to make luminosity logarithmic
@@ -140,7 +154,7 @@ def install(
     raw_grids_path,
     name=None,
     eep_params=eep_params,
-    eep_functions={'prems': my_PreMS, 'rgbump': my_RGBump},
+    eep_functions={'prems': my_PreMS, 'tams': my_TAMS, 'rgbump': my_RGBump},
     metric_function=my_HRD,
     ):
     '''
