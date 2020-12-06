@@ -69,6 +69,15 @@ class StarGrid(pd.DataFrame):
         '''Set the name of the grid.'''
         self.name = name
 
+    @property
+    def index_range(self):
+        '''Returns the range of StarGrid index columns.
+        '''
+        idx = self.index.droplevel(-1)
+        mins = [idx.get_level_values(n).min() for n in idx.names]
+        maxs = [idx.get_level_values(n).max() for n in idx.names]
+        return pd.Series(zip(mins, maxs), index=idx.names)
+
     def get_track(self, index):
         '''Get a track at a specific index.
 
