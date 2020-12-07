@@ -36,7 +36,7 @@ Personally, I create a conda environment for this. In this example I'll call it 
 ```bash
 conda create -n stars numpy scipy pandas matplotlib pyarrow numba emcee
 conda activate stars
-pip install miniutils git+https://github.com/zclaytor/kiauhoku
+pip install git+https://github.com/zclaytor/kiauhoku
 ```
 
 Brand new: Kīauhōkū is on PyPI! It requires Python 3.8 or less, but you can finally do this:
