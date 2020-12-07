@@ -11,7 +11,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from miniutils.progress_bar import progbar, parallel_progbar
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 import emcee
@@ -104,7 +104,8 @@ class StarGrid(pd.DataFrame):
         eep_functions=None,
         metric_function=None,
         progress=True,
-        use_pool=False
+        nprocs=None,
+        **kwargs
     ):
         '''
         Converts the grid of evolution tracks to EEP basis. For details on EEP
@@ -132,18 +133,17 @@ class StarGrid(pd.DataFrame):
             function(track, eep_params), where `track` is a single track.
             If no function is supplied, defaults to kiauhoku.eep._HRD_distance.
 
-        progress (bool, True): whether or not to display a tqdm progress bar.
+        progress (bool, True): whether or not to display a progress bar.
 
-        use_pool (bool, False): (not implemented) whether or not to use
-            multiprocessing/pooling.
+        nprocs (int, None): how many parallel processes to use for MultiIndex
+            DataFrames. If none is specified, defaults to the number of CPUs.
+
+        **kwargs: extra keyword arguments to pass to parallel_progbar.
 
         Returns
         -------
         eep_frame (StarGrid): grid of EEP-based evolution tracks.
         '''
-
-        if use_pool:
-            print('Pooling not yet implemented in <function StarGrid.to_eep>')
 
         # User can specify eep_params, but if none are specified,
         # searched for cached params.
@@ -153,27 +153,19 @@ class StarGrid(pd.DataFrame):
         # If self is a MultiIndexed DataFrame, split it into individual
         # tracks, convert to EEP basis, and recombine.
         if self.is_MultiIndex():
+            def eep_pool_helper(i):
+                # Not strictly necessary, but makes for cleaner mapping.
+                track = self.loc[i, :]
+                return _eep_interpolate(track, eep_params, eep_functions, metric_function)
+
+            # create index iterator and pass to the mapping/progress function
             idx = self.index.droplevel(-1).drop_duplicates()
-            if progress:
-                idx_iter = tqdm(idx)
-            else:
-                idx_iter = idx
+            eep_tracks = parallel_progbar(eep_pool_helper, idx, 
+                verbose=progress, nprocs=nprocs, **kwargs)
 
-            eep_list = []
-            idx_list = []
-
-            # Iterate through tracks
-            for i in idx_iter:
-                eep_track = _eep_interpolate(
-                    self.loc[i, :],
-                    eep_params,
-                    eep_functions,
-                    metric_function
-                )
-                if eep_track is None:
-                    continue
-                eep_list.append(eep_track)
-                idx_list += [(*i, j_eep) for j_eep in eep_track.index]
+            # Setup MultiIndex and remove Nones
+            idx_list = [(*i, j) for i, tr in zip(idx, eep_tracks) if tr is not None for j in tr.index]
+            eep_tracks = [tr for tr in eep_tracks if tr is not None]
 
             # Create MultiIndex for EEP frame
             multiindex = pd.MultiIndex.from_tuples(
@@ -181,14 +173,17 @@ class StarGrid(pd.DataFrame):
                 names=[*idx.names, 'eep']
             )
 
-            eep_frame = pd.concat(eep_list, ignore_index=True)
+            # Put it all together
+            eep_frame = pd.concat(eep_tracks, ignore_index=True)
             eep_frame.index = multiindex
 
+        # Other case is if a single track is passed
         else:
             eep_frame = _eep_interpolate(
                 self, eep_params, eep_functions, metric_function
             )
 
+        # Cast DataFrame to StarGrid
         eep_frame = from_pandas(eep_frame, name=self.name, eep_params=eep_params)
 
         return eep_frame
@@ -354,7 +349,7 @@ class StarGridInterpolator(DFInterpolator):
     def mcmc_star(self, log_prob_fn, args,
         pos0=None, initial_guess=None, guess_width=None,
         n_walkers=None, n_burnin=0, n_iter=500,
-        save_path=None, **kw,
+        save_path=None, **kwargs,
     ):
         '''
         Uses emcee to sample stellar models from the grid.
@@ -402,7 +397,7 @@ class StarGridInterpolator(DFInterpolator):
             Use of Parquet requires that you have pyarrow or another parquet-
             compatible package installed.
 
-        kw: Extra keyword arguments to pass to the EnsembleSampler.
+        kwargs: Extra keyword arguments to pass to the EnsembleSampler.
 
         Returns
         -------
@@ -432,7 +427,7 @@ class StarGridInterpolator(DFInterpolator):
             log_prob_fn,
             args=(self, *args),
             blobs_dtype=[('star', pd.Series)],
-            **kw,
+            **kwargs,
         )
 
         # Run burn-in stage
@@ -468,7 +463,7 @@ class StarGridInterpolator(DFInterpolator):
         return sampler, output
 
     def fit_star(self, star_dict, guess, bounds, *args,
-                 loss='meansquarederror', **kw
+                 loss='meansquarederror', **kwargs
     ):
         '''
         Fit a star from data using scipy.optimize.minimize.
@@ -485,7 +480,7 @@ class StarGridInterpolator(DFInterpolator):
 
         args: extra arguments to be passed to the loss function.
 
-        kw: extra keyword arguments to be passed to scipy.optimize.minimize.
+        kwargs: extra keyword arguments to be passed to scipy.optimize.minimize.
 
         RETURNS
         -------
@@ -500,7 +495,7 @@ class StarGridInterpolator(DFInterpolator):
             loss_function = self._meanpercenterror
 
         args = (star_dict, *args)
-        result = minimize(loss_function, guess, args=args, bounds=bounds, **kw)
+        result = minimize(loss_function, guess, args=args, bounds=bounds, **kwargs)
         star = self.get_star_eep(result.x)
 
         return star, result
