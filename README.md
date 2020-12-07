@@ -4,7 +4,7 @@ Python utilities for stellar model grid interpolation.
 
 If you find this package useful, please cite [Claytor et al. (2020)][gyro paper].
 
-Download the model grids from [Google Drive][google drive].
+Download the model grids from [Zenodo][zenodo].
 
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
@@ -27,26 +27,26 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 - scipy  
 - pandas  
 - matplotlib  
-- tqdm
+- miniutils
 - pyarrow (or some package that supports parquet files)
 - numba
 - [emcee][emcee]
 
 Personally, I create a conda environment for this. In this example I'll call it "stars".
 ```bash
-conda create -n stars numpy scipy pandas matplotlib tqdm pyarrow numba emcee
+conda create -n stars numpy scipy pandas matplotlib pyarrow numba emcee
 conda activate stars
-pip install git+https://github.com/zclaytor/kiauhoku
+pip install miniutils git+https://github.com/zclaytor/kiauhoku
 ```
 
 Brand new: Kīauhōkū is on PyPI! It requires Python 3.8 or less, but you can finally do this:
 ```bash
 pip install kiauhoku
 ```
-You still need to download the grids from Google Drive and follow grid-specific install instructions. I'm working on including the basic files with the pip install.
+You still need to download the grids from Zenodo and follow grid-specific install instructions. I'm working on including the basic files with the pip install.
 
 ## I don't care about the documentation. Just let me get started!
-1. Download the model grids from [Google Drive][google drive].
+1. Download the model grids from [Zenodo][zenodo].
 
 2. Open an interactive Python session in the directory with the install script. Here we'll install the "fastlaunch" grid, which is a YREC grid that's been processed with the Rotevol rotation tracer code:
 ```python
@@ -112,4 +112,4 @@ If you create a setup file for your favorite model grid and you'd like it to be 
 [van Saders]: https://ui.adsabs.harvard.edu/abs/2013ApJ...776...67V/abstract
 [emcee]: https://emcee.readthedocs.io/en/latest/
 [isochrones]: https://isochrones.readthedocs.io/en/latest/
-[google drive]: https://drive.google.com/drive/folders/1JLB-IATwHT4XE8qk3y3cXv6ek7Lhk2-H?usp=sharing
+[zenodo]: https://doi.org/10.5281/zenodo.4287717
