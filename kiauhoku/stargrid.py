@@ -851,7 +851,10 @@ def load_grid(path=None, name=None, kind='full'):
         file_path = os.path.join(grids_path, name, f'{kind}_grid.pqt')
 
     if (kind == 'eep') or ('eep' in file_path):
-        eep_params = load_eep_params(name)
+        try:
+            eep_params = load_eep_params(name)
+        except:
+            eep_params = None
     else:
         eep_params = None
 
