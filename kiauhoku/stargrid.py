@@ -48,7 +48,7 @@ class StarGrid(pd.DataFrame):
 
         self._metadata = ['name', 'eep_params']
         # Set StarGrid name
-        self.name = name
+        self.name = name or 'Anonymous StarGrid'
         self.eep_params = eep_params
 
     # this method makes it so our methods return an instance
@@ -247,7 +247,7 @@ class StarGridInterpolator(DFInterpolator):
     def __init__(self, grid):
         super(StarGridInterpolator, self).__init__(grid)
 
-        self.name = grid.name
+        self.name = grid.name or 'Anonymous StarGridInterpolator'
         self.columns = grid.columns
         self.index = grid.index
 
