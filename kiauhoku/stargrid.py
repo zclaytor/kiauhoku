@@ -596,7 +596,7 @@ class StarGridInterpolator(DFInterpolator):
         some_fit = False
         good_fit = False
         for idx in idx_list:
-            fit = self.fit_star(star_dict, idx, *args, **kwargs)
+            fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
             if fit.success:
                 some_fit = True
                 if fit.fun < best_loss:
