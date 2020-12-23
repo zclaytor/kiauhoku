@@ -48,7 +48,7 @@ class StarGrid(pd.DataFrame):
 
         self._metadata = ['name', 'eep_params']
         # Set StarGrid name
-        self.name = name
+        self.name = name or 'Anonymous StarGrid'
         self.eep_params = eep_params
 
     # this method makes it so our methods return an instance
@@ -71,7 +71,7 @@ class StarGrid(pd.DataFrame):
 
     @property
     def index_range(self):
-        '''Returns the range of StarGrid index columns.
+        '''Returns the range of index columns.
         '''
         idx = self.index.droplevel(-1)
         mins = [idx.get_level_values(n).min() for n in idx.names]
@@ -247,12 +247,21 @@ class StarGridInterpolator(DFInterpolator):
     def __init__(self, grid):
         super(StarGridInterpolator, self).__init__(grid)
 
-        self.name = grid.name
+        self.name = grid.name or 'Anonymous StarGridInterpolator'
         self.columns = grid.columns
         self.index = grid.index
 
         self.max_eep = grid.index.to_frame().eep.max()
         self.eep_params = grid.eep_params
+
+    @property
+    def index_range(self):
+        '''Returns the range of index columns.
+        '''
+        idx = self.index.droplevel(-1)
+        mins = [idx.get_level_values(n).min() for n in idx.names]
+        maxs = [idx.get_level_values(n).max() for n in idx.names]
+        return pd.Series(zip(mins, maxs), index=idx.names)
 
     def get_primary_eeps(self):
         '''Return indices of Primary EEPs in the EEP-based tracks.
@@ -264,7 +273,7 @@ class StarGridInterpolator(DFInterpolator):
 
     def get_star_eep(self, index):
         '''
-        Interpolate a single model from the grid.
+        Interpolate a single model or list of models from the grid.
         Note that this is the preferred way to sample models from the grid.
 
         `index` should be a tuple of indices in the same way you would access
@@ -462,43 +471,159 @@ class StarGridInterpolator(DFInterpolator):
 
         return sampler, output
 
-    def fit_star(self, star_dict, guess, bounds, *args,
-                 loss='meansquarederror', **kwargs
+    def fit_star(self, star_dict, guess, *args,
+                 loss='meansquarederror', scale=None, **kwargs
     ):
         '''
-        Fit a star from data using scipy.optimize.minimize.
+        Fit a star from data using `scipy.optimize.minimize`.
 
-        PARAMETERS
+        Parameters
         ----------
         star_dict: dict containing label-value pairs for the star to be fit
 
         guess: tuple containing initial guess of input values for star.
             These should be of the same form as the input to
-            StarGridInterpolator.get_star_eep.
+            `StarGridInterpolator.get_star_eep`.
 
-        bounds: a sequence of (min, max) tuples for each input parameter.
+        *args: extra arguments to be passed to the loss function.
 
-        args: extra arguments to be passed to the loss function.
+        loss: string specifying the loss function to be used.
+            'meansquarederror' and 'meanpercenterror' are implemented.
+            Defaults to 'measquarederror'.
 
-        kwargs: extra keyword arguments to be passed to scipy.optimize.minimize.
+        scale: optional tuple of scale factors to be used in the
+            meansquarederror computation. Defaults to None.
+            If `scale` is specified with meanpercenterror loss, an
+            error will be raised.
 
-        RETURNS
+        **kwargs: extra keyword arguments to be passed to `scipy.optimize.minimize`.
+
+        Returns
         -------
-        star: pandas.Series of StarGridInterpolator output for result.
-
-        result: the output of scipy.optimize.minimize.
+        result: the output of `scipy.optimize.minimize`.
         '''
 
-        if loss == 'meansquarederror':
+        if loss in ['meansquarederror', 'mse']:
             loss_function = self._meansquarederror
-        elif loss == 'meanpercenterror':
+        elif loss in ['meanpercenterror', 'meanpcterr', 'mpe']:
             loss_function = self._meanpercenterror
+        else:
+            raise NotImplementedError(
+                f'Loss function {loss} not implemented.'
+            )
 
-        args = (star_dict, *args)
-        result = minimize(loss_function, guess, args=args, bounds=bounds, **kwargs)
-        star = self.get_star_eep(result.x)
+        if scale is not None:
+            args = (star_dict, scale, *args)
+        else:
+            args = (star_dict, *args)
 
-        return star, result
+        result = minimize(loss_function, guess, args=args, method='Nelder-Mead', **kwargs)
+
+        return result
+
+    def gridsearch_fit(self, star_dict, *args, scale=None, tol=1e-6,
+                    mass_step=0.1, met_step=0.2, alpha_step=0.2, eep_step=50, 
+                    verbose=True, **kwargs):
+        '''
+        Aggressively fit a star using `scipy.optimize.minimize` across the
+        whole grid of models until a sufficient match is found.
+
+        There are three possible cases:
+        (1) A fit is found whose loss value is within `tol` tolerance. If this
+            happens, the search ceases and the fit is returned.
+        (2) `scipy.optimize.minimize` successfully identifies a fit, but it is
+            not within the user-specified tolerance. In this case, the entire
+            grid will be searched, and the best fit will be returned.
+        (3) `scipy.optimize.minimize` fails converge to a solution. In this
+            case, a `None` is returned with the most recent scipy output.
+
+        Parameters
+        ----------
+        star_dict (dict): dictionary containing label-value pairs to be fit.
+
+        *args: extra arguments to be passed to `StarGridInterpolator.fit_star`.
+
+        scale (tuple, None): scale factors by which to divide the values of 
+            star_dict to put them to the same order of magnitude. This speeds
+            up the fitting process in test cases and also improves accuracy.
+
+        tol (float, 1e-6): user-specified tolerance for the fit. The tolerance
+            represents the desired value of the loss. If a solution is found
+            within the tolerance, the gridsearch will cease. 
+
+        mass_step (float, 0.1): the mass spacing between scipy optimizers.
+
+        met_step (float, 0.2): the metallicity spacing between scipy optimizers.
+
+        alpha_step (float, 0.2): the alpha-abundance spacing between scipy
+            optimizers. If `initial_alpha` is not in the index, this is ignored.
+
+        eep_step (float, 50): the EEP spacing between scipy optimizers.
+
+        verbose (bool, True): whether to print fit messages. Recommended to
+            leave as `True` unless you're running a large list of stars AND
+            you know what you're doing.
+
+        **kwargs: extra keyword arguments to be passed to `fit_star`.
+
+        Returns
+        -------
+        best_model (pandas Series): the stellar parameters for the best fit, if
+            a fit was achieved. Otherwise this will be `None`.
+
+        best_fit (`scipy.optimize.optimize.OptimizeResult`): the scipy 
+            optimizer result containing information pertaining to the fit.
+        '''
+
+        if verbose:
+            print(f'Fitting star with {self.name}...')
+
+        # Construct a multi-index instead of using a triple(+)-nested for-loop
+        idxrange = self.index_range
+        mass_list = np.arange(*idxrange['initial_mass'], mass_step)
+        met_list = np.arange(*idxrange['initial_met'], met_step)
+        eep_list = np.arange(252, 606, eep_step)
+        if 'initial_alpha' in idxrange:
+            alpha_list = np.arange(*idxrange['initial_alpha'], alpha_step)
+            idx_list = pd.MultiIndex.from_product(
+                [mass_list, met_list, alpha_list, eep_list])
+        else:
+            idx_list = pd.MultiIndex.from_product(
+                [mass_list, met_list, eep_list])
+        
+        # Loop through indices searching for fit
+        best_loss = 100
+        some_fit = False
+        good_fit = False
+        for idx in idx_list:
+            fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
+            if fit.success:
+                some_fit = True
+                if fit.fun < best_loss:
+                    best_fit = fit
+                    best_loss = fit.fun
+                    if fit.fun <= tol:
+                        good_fit = True
+                        if verbose:
+                            print(f'{self.name}: success!')
+                        break
+
+        # Check to see how the fit did, print comments if desired.
+        if not some_fit:
+            if verbose:
+                print(f'*!*!*!* {self.name} fit failed! Returning last attempt.')
+            return None, fit
+        if verbose and not good_fit:
+            print(f'{self.name}: Fit not converged to within tolerance, but returning closest fit.')
+
+        # get the model, add the indices, and return
+        fit_idx = best_fit.x
+        best_model = self.get_star_eep(fit_idx)
+        for label, value in zip(idxrange.index, fit_idx[:-1]):
+            best_model[label] = value
+        best_model['eep'] = fit_idx[-1]
+        
+        return best_model, best_fit
 
     def _meansquarederror(self, index, star_dict, scale=False):
         '''Mean Squared Error loss function for `fit_star`.
@@ -726,7 +851,10 @@ def load_grid(path=None, name=None, kind='full'):
         file_path = os.path.join(grids_path, name, f'{kind}_grid.pqt')
 
     if (kind == 'eep') or ('eep' in file_path):
-        eep_params = load_eep_params(name)
+        try:
+            eep_params = load_eep_params(name)
+        except:
+            eep_params = None
     else:
         eep_params = None
 
