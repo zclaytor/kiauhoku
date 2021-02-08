@@ -1,5 +1,7 @@
 # [Kīauhōkū][kiauhoku github]
 
+[![ascl:2011.027](https://img.shields.io/badge/ascl-2011.027-blue.svg?colorB=262255)](https://ascl.net/2011.027)
+
 Python utilities for stellar model grid interpolation.
 
 If you find this package useful, please cite [Claytor et al. (2020)][gyro paper].
