@@ -41,7 +41,7 @@ conda activate stars
 pip install git+https://github.com/zclaytor/kiauhoku
 ```
 
-Brand new: Kīauhōkū is on PyPI! It requires Python 3.8 or less, but you can finally do this:
+Brand new: Kīauhōkū is on PyPI! It requires Python 3, but you can finally do this:
 ```bash
 pip install kiauhoku
 ```
