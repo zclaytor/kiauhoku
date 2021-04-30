@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/zclaytor/kiauhoku",
     license="MIT",
-    python_requires='<3.9',
+    python_requires='>=3',
     install_requires=[
         'numpy', 'pandas', 'scipy', 'miniutils', 'emcee', 'pyarrow', 'numba'
     ],
