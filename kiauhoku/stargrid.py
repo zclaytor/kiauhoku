@@ -592,7 +592,7 @@ class StarGridInterpolator(DFInterpolator):
                 [mass_list, met_list, eep_list])
         
         # Loop through indices searching for fit
-        best_loss = 100
+        best_loss = 1e10
         some_fit = False
         good_fit = False
         for idx in idx_list:
