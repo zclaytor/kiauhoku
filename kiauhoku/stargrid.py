@@ -578,19 +578,24 @@ class StarGridInterpolator(DFInterpolator):
         if verbose:
             print(f'Fitting star with {self.name}...')
 
-        # Construct a multi-index instead of using a triple(+)-nested for-loop
+        # Construct a multi-index iterator instead of using a nested for-loop
         idxrange = self.index_range
-        mass_list = np.arange(*idxrange['initial_mass'], mass_step)
-        met_list = np.arange(*idxrange['initial_met'], met_step)
-        eep_list = np.arange(252, 606, eep_step)
+        idx_list = []
+        if 'initial_mass' in idxrange:
+            # * operator unravels the tuple to pass values to altrange
+            mass_list = altrange(*idxrange["initial_mass"], mass_step)
+            idx_list.append(mass_list)
+        if 'initial_met' in idxrange:
+            met_list = altrange(*idxrange['initial_met'], met_step)
+            idx_list.append(met_list)
         if 'initial_alpha' in idxrange:
-            alpha_list = np.arange(*idxrange['initial_alpha'], alpha_step)
-            idx_list = pd.MultiIndex.from_product(
-                [mass_list, met_list, alpha_list, eep_list])
-        else:
-            idx_list = pd.MultiIndex.from_product(
-                [mass_list, met_list, eep_list])
-        
+            alpha_list = altrange(*idxrange['initial_alpha'], alpha_step)
+            idx_list.append(alpha_list)
+        eep_list = np.arange(252, 606, eep_step)
+        idx_list.append(eep_list)
+
+        idx_list = pd.MultiIndex.from_product(idx_list)
+
         # Loop through indices searching for fit
         best_loss = 1e10
         some_fit = False
@@ -703,6 +708,12 @@ class StarGridInterpolator(DFInterpolator):
             path = os.path.join(grids_path, self.name, 'interpolator.pkl')
         with open(path, 'wb') as f:
             pickle.dump(self, f)
+
+def altrange(start, stop, step):
+    if stop == start:
+        return [start]
+    else:
+        return np.arange(start, stop, step)
 
 def load_interpolator(name=None, path=None):
     '''
