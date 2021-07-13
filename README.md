@@ -11,7 +11,7 @@ Download the model grids from [Zenodo][zenodo].
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
 University of Hawaiʻi  
-2020 November 23
+2021 July 12
 
 Kīauhōkū  
 From Hawaiian:  
