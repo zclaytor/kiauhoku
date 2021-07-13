@@ -1,6 +1,7 @@
 # [Kīauhōkū][kiauhoku github]
 
 [![ascl:2011.027](https://img.shields.io/badge/ascl-2011.027-blue.svg?colorB=262255)](https://ascl.net/2011.027)
+[![GitHub version](https://badge.fury.io/gh/zclaytor%2Fkiauhoku.svg)](https://badge.fury.io/gh/zclaytor%2Fkiauhoku)
 
 Python utilities for stellar model grid interpolation.
 
