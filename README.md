@@ -2,6 +2,7 @@
 
 [![ascl:2011.027](https://img.shields.io/badge/ascl-2011.027-blue.svg?colorB=262255)](https://ascl.net/2011.027)
 [![GitHub version](https://badge.fury.io/gh/zclaytor%2Fkiauhoku.svg)](https://badge.fury.io/gh/zclaytor%2Fkiauhoku)
+[![PyPI version](https://badge.fury.io/py/kiauhoku.svg)](https://badge.fury.io/py/kiauhoku)
 
 Python utilities for stellar model grid interpolation.
 
@@ -12,7 +13,7 @@ Download the model grids from [Zenodo][zenodo].
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
 University of Hawaiʻi  
-2021 July 12
+2021 July 13
 
 Kīauhōkū  
 From Hawaiian:  
