@@ -8,6 +8,7 @@ evolutionary model grids
 import os
 from importlib import import_module
 import pickle
+import functools
 
 import numpy as np
 import pandas as pd
@@ -153,14 +154,13 @@ class StarGrid(pd.DataFrame):
         # If self is a MultiIndexed DataFrame, split it into individual
         # tracks, convert to EEP basis, and recombine.
         if self.is_MultiIndex():
-            def eep_pool_helper(i):
-                # Not strictly necessary, but makes for cleaner mapping.
-                track = self.loc[i, :]
-                return _eep_interpolate(track, eep_params, eep_functions, metric_function)
+            partial_eep = functools.partial(_eep_pool_helper, self,
+                eep_params, eep_functions, metric_function)
 
             # create index iterator and pass to the mapping/progress function
             idx = self.index.droplevel(-1).drop_duplicates()
-            eep_tracks = parallel_progbar(eep_pool_helper, idx, 
+            #tracks = self.groupby(level=list(range(idx.nlevels)))
+            eep_tracks = parallel_progbar(partial_eep, idx, 
                 verbose=progress, nprocs=nprocs, **kwargs)
 
             # Setup MultiIndex and remove Nones
@@ -714,6 +714,9 @@ def altrange(start, stop, step):
         return [start]
     else:
         return np.arange(start, stop, step)
+
+def _eep_pool_helper(tracks, eep_params, eep_functions, metric_function, i):
+    return _eep_interpolate(tracks.loc[i], eep_params, eep_functions, metric_function)  
 
 def load_interpolator(name=None, path=None):
     '''
