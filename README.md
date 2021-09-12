@@ -49,7 +49,7 @@ pip install kiauhoku
 ```
 You still need to download the grids from Zenodo and follow grid-specific install instructions. I'm working on including the basic files with the pip install.
 
-## I don't care about the documentation. Just let me get started!
+## Quickstart Guide
 1. Download the model grids from [Zenodo][zenodo].
 
 2. Open an interactive Python session in the directory with the install script. Here we'll install the "fastlaunch" grid, which is a YREC grid that's been processed with the Rotevol rotation tracer code:
