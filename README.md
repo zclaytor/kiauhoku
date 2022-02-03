@@ -31,7 +31,6 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 - scipy  
 - pandas  
 - matplotlib  
-- miniutils
 - pyarrow (or some package that supports parquet files)
 - numba
 - [emcee][emcee]
@@ -43,7 +42,7 @@ conda activate stars
 pip install git+https://github.com/zclaytor/kiauhoku
 ```
 
-Brand new: Kīauhōkū is on PyPI! It requires Python 3, but you can finally do this:
+Kīauhōkū is also on PyPI! It requires Python 3, but you can do this:
 ```bash
 pip install kiauhoku
 ```
