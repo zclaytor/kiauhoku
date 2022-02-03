@@ -12,13 +12,13 @@ import functools
 
 import numpy as np
 import pandas as pd
-from miniutils.progress_bar import progbar, parallel_progbar
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 import emcee
 
 from .eep import _eep_interpolate
 from .interp import DFInterpolator
+from .progress_bar import progbar, parallel_progbar
 
 
 grids_path = os.path.expanduser('~/') + '.kiauhoku/grids/'
