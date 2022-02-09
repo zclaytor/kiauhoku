@@ -852,7 +852,7 @@ def load_eep_grid(path=None, name=None):
     '''
     return load_grid(path=path, name=name, kind='eep')
 
-def load_grid(path=None, name=None, kind='full'):
+def load_grid(path=None, name=None, kind='eep'):
     '''Load model grid from file.
     '''
     if path:
