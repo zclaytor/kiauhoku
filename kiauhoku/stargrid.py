@@ -18,7 +18,7 @@ import emcee
 
 from .eep import _eep_interpolate
 from .interp import DFInterpolator
-from .progress_bar import progbar, parallel_progbar
+from .progress_bar import parallel_progbar
 
 
 grids_path = os.path.expanduser('~/') + '.kiauhoku/grids/'
