@@ -9,6 +9,9 @@ import os
 from importlib import import_module
 import pickle
 import functools
+import requests
+import tarfile
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
@@ -21,8 +24,9 @@ from .interp import DFInterpolator
 from .progress_bar import parallel_progbar
 
 
-grids_path = os.path.expanduser('~/') + '.kiauhoku/grids/'
-interp_path = os.path.expanduser('~/') + '.kiauhoku/interpolators/'
+grids_path = os.path.join(os.path.expanduser('~/'), '.kiauhoku/grids')
+grids_url = "https://zenodo.org/api/records/4287717"
+
 
 class StarGrid(pd.DataFrame):
     '''
@@ -705,7 +709,7 @@ class StarGridInterpolator(DFInterpolator):
         '''Saves the StarGridInterpolator to a pickle file.
         '''
         if path is None:
-            path = os.path.join(grids_path, self.name, 'interpolator.pkl')
+            path = os.path.join(grids_path, self.name, f'{self.name}_interpolator.pkl')
         with open(path, 'wb') as f:
             pickle.dump(self, f)
 
@@ -722,22 +726,18 @@ def load_interpolator(name=None, path=None):
     '''
     Load StarGridInterpolator from pickle file. If the interpolator has been
     cached during the install, simply specifying the name will be enough to
-    load it.
+    load it. If no interpolator is present, download one.
     '''
-
-    if name and path:
-        raise ValueError('Please specify only `name` or `path`.')
-    elif name:
-        path = os.path.join(grids_path, name, 'interpolator.pkl')
+    if name:
+        path = os.path.join(grids_path, name, f'{name}_interpolator.pkl')
         if not os.path.exists(path):
-            path = os.path.join(interp_path, f'{name}.pkl')
-            if not os.path.exists(path):
-                raise FileNotFoundError(f"No interpolator found named '{name}'")
-    elif not path:
-        raise ValueError('Specify `name` or `path`.')
-    
-    with open(path, 'rb') as f:
-        interp = pickle.load(f)
+            return load_eep_grid(name=name).to_interpolator()
+            
+    try:
+        with open(path, 'rb') as f:
+            interp = pickle.load(f)
+    except:
+        raise FileNotFoundError(f"Interpolator `{path}` not found.")
     return interp
 
 def from_pandas(df, *args, **kwargs):
@@ -842,47 +842,89 @@ def install_grid(script, kind='raw'):
 
     print(f'Model grid "{module.name}" installed.')
 
-def load_full_grid(path=None, name=None):
+def load_full_grid(name=None, path=None):
     '''Load raw model grid from file.
     '''
-    return load_grid(path=path, name=name, kind='full')
+    return load_grid(name=name, path=path, kind='full')
 
-def load_eep_grid(path=None, name=None):
+def load_eep_grid(name=None, path=None):
     '''Load EEP-based model grid from file.
     '''
-    return load_grid(path=path, name=name, kind='eep')
+    return load_grid(name=name, path=path, kind='eep')
 
-def load_grid(path=None, name=None, kind='eep'):
-    '''Load model grid from file.
+def load_grid(name=None, path=None, kind='eep'):
+    '''Load model grid from file. If it can't be found, download it.
     '''
-    if path:
-        file_path = path
-        if name:
-            print('`kiauhoku.stargrid.load_grid`: `path` is specified; ignoring `name`.')
+    if name:
+        if kind == "eep":
+            try:
+                eep_params = load_eep_params(name)
+            except:
+                eep_params = None
         else:
-            name = os.path.basename(os.path.dirname(path))
-    elif name:
-        file_path = os.path.join(grids_path, name, f'{kind}_grid.pqt')
-
-    if (kind == 'eep') or ('eep' in file_path):
-        try:
-            eep_params = load_eep_params(name)
-        except:
             eep_params = None
+        file_path = os.path.join(grids_path, name, f'{name}_{kind}.pqt')
     else:
-        eep_params = None
+        file_path = path
+        
+    if not os.path.exists(file_path):
+        print(f"Downloading {name}_{kind} from Zenodo. This should be a one-time occurrence.")
+        download(name, kind=kind)
 
-    if os.path.exists(file_path):
-        return from_parquet(file_path, name=name, eep_params=eep_params)
-    raise FileNotFoundError(f"No such file or directory: '{file_path}'")
+    return from_parquet(file_path, name=name, eep_params=eep_params)
 
 def load_eep_params(name):
     '''
     Assuming EEP params were specified in the setup script and cached,
     this will load them from the cache by specifying the grid name.
     '''
-    params_path = os.path.join(grids_path, name, 'eep_params.pkl')
+    params_path = os.path.join(grids_path, name, f'{name}_eep_params.pkl')
     with open(params_path, 'rb') as f:
         eep_params = pickle.load(f)
 
     return eep_params
+
+def download(name, kind="eep", create_interpolator=True):
+    # create cache directory
+    if not os.path.exists(grids_path):
+        os.makedirs(grids_path)
+
+    # check permanent record locator to get latest version
+    r = requests.get(grids_url)
+    if r.ok:
+        record_id = r.json()["id"]
+        fname = f"{name}_{kind}.tar.gz"
+        my_url = f"https://zenodo.org/record/{record_id}/files/{fname}"
+
+        # download and extract files
+        # STOP HERE
+        r = requests.get(my_url, stream=True)
+        if r.ok:
+            block_size = 1024
+            total_size = int(r.headers.get("Content-Length", 0))/block_size
+
+            tgz_file = os.path.join(grids_path, fname)
+            with open(tgz_file, "wb") as f:
+                for data in tqdm(r.iter_content(block_size), total=total_size, unit="B", unit_scale=True):
+                    f.write(data)
+
+            with tarfile.open(tgz_file) as g:
+                g.extractall(grids_path)
+
+        else:
+            raise requests.exceptions.RequestException(
+                f"Bad request to url: {my_url}"
+            )
+    else:
+        raise requests.exceptions.RequestException(
+            f"Bad request to url: {grids_url}"
+        )
+
+    if (kind == "eep") and create_interpolator:
+        # save grid interpolator
+        grid = load_eep_grid(name=name)
+        interp = grid.to_interpolator()
+        interp.to_pickle(path=os.path.join(grids_path, name, f"{name}_interpolator.pkl"))
+        del grid, interp
+
+    return
