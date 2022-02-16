@@ -885,6 +885,26 @@ def load_eep_params(name):
     return eep_params
 
 def download(name, kind="eep", create_interpolator=True):
+    '''
+    Downloads model grid data from Zenodo. By default, pulls from the most
+    recent version. A future version of kiauhoku will let users specify
+    a Zenodo record number to download from.
+    
+    Parameters
+    ----------
+    name (str): the name of the grid to be downloaded. Must be one of
+        'dartmouth', 'garstec', 'mist', 'yrec', 'fastlaunch', 'slowlaunch', 'rocrit'.
+
+    kind (str, 'eep'): the kind of files to be downloaded. Can be one of
+        'eep', 'full', or 'src', but default is 'eep'.
+
+    create_interpolator (bool, True, optional): whether to create an interpolator
+        from the downloaded grid. This will only work if the requested grid is
+        an 'eep' grid.
+    '''
+    if name not in ["dartmouth", "garstec", "mist", "yrec", "fastlaunch", "slowlaunch", "rocrit"]:
+        raise NotImplementedError(f"Grid `{name}` has not been implemented or uploaded to Zenodo.")
+        
     # create cache directory
     if not os.path.exists(grids_path):
         os.makedirs(grids_path)
