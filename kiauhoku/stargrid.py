@@ -897,7 +897,6 @@ def download(name, kind="eep", create_interpolator=True):
         my_url = f"https://zenodo.org/record/{record_id}/files/{fname}"
 
         # download and extract files
-        # STOP HERE
         r = requests.get(my_url, stream=True)
         if r.ok:
             block_size = 1024
