@@ -13,7 +13,8 @@ Download the model grids from [Zenodo][zenodo].
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
 University of Hawaiʻi  
-2021 July 13
+2022 February 15
+(Happy Birthday, Mom!)
 
 Kīauhōkū  
 From Hawaiian:  
@@ -46,23 +47,14 @@ Kīauhōkū is also on PyPI! It requires Python 3, but you can do this:
 ```bash
 pip install kiauhoku
 ```
-You still need to download the grids from Zenodo and follow grid-specific install instructions. I'm working on including the basic files with the pip install.
 
 ## Quickstart Guide
-1. Download the model grids from [Zenodo][zenodo].
-
-2. Open an interactive Python session in the directory with the install script. Here we'll install the "fastlaunch" grid, which is a YREC grid that's been processed with the Rotevol rotation tracer code:
-```python
-from kiauhoku import rotevol
-path_to_grid = wherever_you_installed_grids + '/grids/fastlaunch'
-rotevol.install(path_to_grid)
-```
-
-3. You're ready to go! You can import and interpolate away.
+As of v.2.0, you no longer need to manually download and install model grids; `kiauhoku` will automatically download any missing grid from Zenodo when you try to load it!
 ```python
 import kiauhoku as kh
 grid = kh.load_interpolator('fastlaunch')
 ```
+After this, the `fastlaunch` grid will be installed in `~/.kiauhoku/grids`. You shouldn't have to download it again after this. Note that download times will vary depending on the size of the model grid.
 
 ## How it works
 
@@ -110,7 +102,7 @@ If you create a setup file for your favorite model grid and you'd like it to be 
 
 
 [kiauhoku github]: https://github.com/zclaytor/kiauhoku
-[zclaytor]: https://zclaytor.github.io
+[zclaytor]: https://claytorastro.wixsite.com/home
 [gyro paper]: https://ui.adsabs.harvard.edu/abs/2020ApJ...888...43C/abstract
 [van Saders]: https://ui.adsabs.harvard.edu/abs/2013ApJ...776...67V/abstract
 [emcee]: https://emcee.readthedocs.io/en/latest/
