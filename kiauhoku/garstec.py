@@ -195,7 +195,7 @@ def install(
         os.makedirs(path)
 
     # Cache eep parameters
-    with open(os.path.join(path, 'eep_params.pkl'), 'wb') as f:
+    with open(os.path.join(path, 'garstec_eep_params.pkl'), 'wb') as f:
         pickle.dump(eep_params, f)
 
     print('Reading and combining grid files')
@@ -203,7 +203,7 @@ def install(
     grids = from_pandas(grids, name=name)
 
     # Save full grid to file
-    full_save_path = os.path.join(path, 'full_grid.pqt')
+    full_save_path = os.path.join(path, 'garstec_full.pqt')
     print(f'Saving to {full_save_path}')
     grids.to_parquet(full_save_path)
 
@@ -211,13 +211,13 @@ def install(
     eeps = grids.to_eep(eep_params, eep_functions, metric_function)
 
     # Save EEP grid to file
-    eep_save_path = os.path.join(path, 'eep_grid.pqt')
+    eep_save_path = os.path.join(path, 'garstec_eep.pqt')
     print(f'Saving to {eep_save_path}')
     eeps.to_parquet(eep_save_path)
 
     # Create and save interpolator to file
     interp = eeps.to_interpolator()
-    interp_save_path = os.path.join(path, 'interpolator.pkl')
+    interp_save_path = os.path.join(path, 'garstec_interpolator.pkl')
     print(f'Saving interpolator to {interp_save_path}')
     interp.to_pickle(path=interp_save_path)
 
