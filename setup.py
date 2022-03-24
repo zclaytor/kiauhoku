@@ -15,7 +15,7 @@ setuptools.setup(
     license="MIT",
     python_requires='>=3',
     install_requires=[
-        'tqdm', 'numpy', 'pandas', 'scipy', 'emcee', 'pyarrow', 'numba'
+        'requests', 'tqdm', 'numpy', 'pandas', 'scipy', 'emcee', 'pyarrow', 'numba'
     ],
     packages=setuptools.find_packages(),
     include_package_data=True,

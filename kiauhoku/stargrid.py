@@ -9,14 +9,14 @@ import os
 from importlib import import_module
 import pickle
 import functools
-import requests
 import tarfile
-from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
+import requests
+from tqdm import tqdm
 import emcee
 
 from .eep import _eep_interpolate

@@ -13,8 +13,7 @@ Download the model grids from [Zenodo][zenodo].
 (C) [Zachary R. Claytor][zclaytor]  
 Institute for Astronomy  
 University of Hawaiʻi  
-2022 February 15
-(Happy Birthday, Mom!)
+2022 March 24
 
 Kīauhōkū  
 From Hawaiian:  
@@ -31,14 +30,15 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 - numpy  
 - scipy  
 - pandas  
-- matplotlib  
+- matplotlib
+- requests
 - pyarrow (or some package that supports parquet files)
 - numba
 - [emcee][emcee]
 
 Personally, I create a conda environment for this. In this example I'll call it "stars".
 ```bash
-conda create -n stars numpy scipy pandas matplotlib pyarrow numba emcee
+conda create -n stars numpy scipy pandas matplotlib requests pyarrow numba emcee
 conda activate stars
 pip install git+https://github.com/zclaytor/kiauhoku
 ```
