@@ -9,23 +9,20 @@ import os
 from importlib import import_module
 import pickle
 import functools
-import requests
 import tarfile
-from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
+import requests
+from tqdm import tqdm
 import emcee
 
-from .eep import _eep_interpolate
-from .interp import DFInterpolator
-from .progress_bar import parallel_progbar
-
-
-grids_path = os.path.join(os.path.expanduser('~/'), '.kiauhoku/grids')
-grids_url = "https://zenodo.org/api/records/4287717"
+from .utils.eep import _eep_interpolate
+from .utils.interp import DFInterpolator
+from .utils.progress_bar import parallel_progbar
+from .config import grids_path, grids_url
 
 
 class StarGrid(pd.DataFrame):

@@ -28,7 +28,6 @@ import os
 import itertools
 
 import numba as nb
-from math import sqrt
 import numpy as np
 import pandas as pd
 
@@ -502,20 +501,6 @@ def find_closest3(
             print("{0} {1}".format(x1, y1))
 
     return x1
-
-
-@nb.jit(nopython=True)
-def interp_eeps(xs, x0s, x1s, ii0, ii1, n1, arrays, weight_arrays, lengths):
-    n = len(xs)
-    results = np.empty(n, dtype=nb.float64)
-
-    for i in range(n):
-        x = xs[i]
-        x0 = x0s[i]
-        x1 = x1s[i]
-        results[i] = interp_eep(x, x0, x1, ii0, ii1, n1, arrays, weight_arrays, lengths)
-
-    return results
 
 
 class DFInterpolator(object):
