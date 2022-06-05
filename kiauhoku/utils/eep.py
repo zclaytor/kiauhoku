@@ -299,6 +299,8 @@ def get_RGBTip(track, eep_params, i0=None):
     RGBTip2 = (logT_tr[before_He_burned]).idxmin()
 
     RGBTip = min(RGBTip1, RGBTip2)
+    if RGBTip == i0:
+        return -1
     return RGBTip
 
 def get_ZACHeB(track, eep_params, i0=None):
