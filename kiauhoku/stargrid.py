@@ -724,6 +724,15 @@ def load_interpolator(name=None, path=None):
     Load StarGridInterpolator from pickle file. If the interpolator has been
     cached during the install, simply specifying the name will be enough to
     load it. If no interpolator is present, download one.
+
+    Parameters
+    ----------
+    name (str, optional): the name of the grid you want, e.g., `rocrit`
+
+    path (str, optional): the full path to the interpolator file, including the file name.
+
+    NOTE that *either* `name` or `path` should be specified; specifying both will
+    act as if only `name` is specified.
     '''
     if name:
         path = os.path.join(grids_path, name, f'{name}_interpolator.pkl')
