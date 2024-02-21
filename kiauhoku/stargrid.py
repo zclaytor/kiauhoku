@@ -359,7 +359,7 @@ class StarGridInterpolator(DFInterpolator):
     def mcmc_star(self, log_prob_fn, args,
         pos0=None, initial_guess=None, guess_width=None,
         n_walkers=None, n_burnin=0, n_iter=500,
-        save_path=None, **kwargs,
+        progress=True, save_path=None, **kwargs,
     ):
         '''
         Uses emcee to sample stellar models from the grid.
@@ -402,6 +402,8 @@ class StarGridInterpolator(DFInterpolator):
 
         n_iter (int, optional): number of sample steps. Default: 500.
 
+        progress (bool, optional): whether to display progress bar. Default: True.
+
         save_path (str, optional): You may optionally specify a path to a
             CSV or Parquet file to save the sampler output as a DataFrame.
             Use of Parquet requires that you have pyarrow or another parquet-
@@ -442,13 +444,13 @@ class StarGridInterpolator(DFInterpolator):
 
         # Run burn-in stage
         if n_burnin > 0:
-            pos, prob, state, blobs = sampler.run_mcmc(pos0, n_burnin, progress=True)
+            pos, prob, state, blobs = sampler.run_mcmc(pos0, n_burnin, progress=progress)
             sampler.reset()
         else:
             pos = pos0
 
         # Run sampling stage
-        pos, prob, state, blobs = sampler.run_mcmc(pos, n_iter, progress=True)
+        pos, prob, state, blobs = sampler.run_mcmc(pos, n_iter, progress=progress)
 
         samples = pd.DataFrame(sampler.flatchain, columns=self.index.names)
         blobs = sampler.get_blobs(flat=True)
