@@ -925,17 +925,14 @@ def download(name, kind="eep", create_interpolator=True):
                     f.write(data)
 
             with tarfile.open(tgz_file) as g:
+                # safe_extract added to protect against malicious attacks made possible by a Python bug
                 def is_within_directory(directory, target):
-                    
                     abs_directory = os.path.abspath(directory)
                     abs_target = os.path.abspath(target)
-                
                     prefix = os.path.commonprefix([abs_directory, abs_target])
-                    
                     return prefix == abs_directory
                 
                 def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
-                
                     for member in tar.getmembers():
                         member_path = os.path.join(path, member.name)
                         if not is_within_directory(path, member_path):
