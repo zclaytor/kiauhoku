@@ -13,6 +13,13 @@ Contains
 '''
 
 import os
+from socket import gethostname
 
-grids_path = os.path.join(os.path.expanduser('~/'), '.kiauhoku/grids')
+
 grids_url = "https://zenodo.org/api/records/4287717"
+
+
+if "ufhpc" in gethostname():
+    grids_path = "/blue/jtayar/shared/kiauhoku_grids"
+else:
+    grids_path = os.path.join(os.path.expanduser('~/'), '.kiauhoku/grids')
