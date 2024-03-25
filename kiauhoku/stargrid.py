@@ -289,6 +289,18 @@ class StarGridInterpolator(DFInterpolator):
         data = self.grid[idx]
         return data
     
+    def _get_star_eep(self, index):
+        '''
+        Return a point from the grid if there is an exact match, 
+        rather than interpolating.
+
+        Note that this assumes `index in self.index_names` is True.        
+        '''
+        names = self.index_names
+        idx = tuple([self.idxwhere(l, i) for l, i in zip(names, index)])
+        data = self.grid[idx]
+        return data
+    
     def get_primary_eeps(self):
         '''Return indices of Primary EEPs in the EEP-based tracks.
         '''
@@ -309,8 +321,14 @@ class StarGridInterpolator(DFInterpolator):
 
         >>> star = grid.get_star_eep((0.987, 0.2, 350))
         '''
+        if not isinstance(index, tuple):
+            index = tuple(index)
+            
+        if index in self.index:
+            star_values = self._get_star_eep(index)
+        else:
+            star_values = self(index)
 
-        star_values = self(index)
         if len(np.shape(index)) == 1:
             star = pd.Series(star_values, index=self.columns)
         else:
@@ -372,6 +390,8 @@ class StarGridInterpolator(DFInterpolator):
 
         >>> star = grid.get_track((0.987, 0.2))
         '''
+        if not isinstance(index, tuple):
+            index = tuple(index)
 
         if index in self.index.droplevel(-1):
             star_values = self._get_track(index)
@@ -380,6 +400,7 @@ class StarGridInterpolator(DFInterpolator):
             ones_arr = np.ones(num_eeps)
             idx = [i*ones_arr for i in index] + [np.arange(num_eeps)]
             star_values = self(idx)
+            
         track = StarGrid(star_values, columns=self.columns,
                          name=self.name, eep_params=self.eep_params)
         return track
