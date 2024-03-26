@@ -12,9 +12,9 @@ If you find this package useful, please cite [Claytor et al. (2020)][gyro paper]
 Download the model grids from [Zenodo][zenodo].
 
 (C) [Zachary R. Claytor][zclaytor]  
-Institute for Astronomy  
-University of Hawaiʻi  
-2022 March 24
+Department of Astronomy  
+University of Florida  
+2024 March 25
 
 Kīauhōkū  
 From Hawaiian:  
