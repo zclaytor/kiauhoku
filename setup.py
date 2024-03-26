@@ -23,7 +23,7 @@ setuptools.setup(
     name="kiauhoku",
     version=get_version("kiauhoku/__init__.py"),
     author="Zachary R. Claytor",
-    author_email="zclaytor@hawaii.edu",
+    author_email="zclaytor@ufl.edu",
     description="Utilities for interacting and interpolating stellar evolution models",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
