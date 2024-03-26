@@ -17,18 +17,20 @@ University of Florida
 2024 March 25
 
 Kīauhōkū  
-From Hawaiian:  
+From Hawaiian:
+
 1. vt. To sense the span of a star's existence (i.e., its age).  
 2. n. The speed of a star (in this case, its rotational speed).  
 
 This name was created in partnership with Dr. Larry Kimura and Bruce Torres Fischer, a student participant in *A Hua He Inoa*, a program to bring Hawaiian naming practices to new astronomical discoveries. We are grateful for their collaboration.
 
-Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. It was designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of [van Saders et al. (2013)][van Saders], but other stellar evolution model grids are available. 
+Kīauhōkū is a suite of Python tools to interact with, manipulate, and interpolate between stellar evolutionary tracks in a model grid. It was designed to work with the model grid used in [Claytor et al. (2020)][gyro paper], which was generated using YREC with the magnetic braking law of [van Saders et al. (2013)][van Saders], but other stellar evolution model grids are available.
 
 ## Installation
 
-Kīauhōkū requires the use of Python 3 and uses the following Python packages:  
-- numpy  
+Kīauhōkū requires the use of Python 3 and uses the following Python packages:
+
+- numpy
 - scipy  
 - pandas  
 - matplotlib
@@ -38,6 +40,7 @@ Kīauhōkū requires the use of Python 3 and uses the following Python packages:
 - [emcee][emcee]
 
 Personally, I create a conda environment for this. In this example I'll call it "stars".
+
 ```bash
 conda create -n stars numpy scipy pandas matplotlib requests pyarrow numba emcee
 conda activate stars
@@ -45,16 +48,20 @@ pip install git+https://github.com/zclaytor/kiauhoku
 ```
 
 Kīauhōkū is also on PyPI! It requires Python 3, but you can do this:
+
 ```bash
 pip install kiauhoku
 ```
 
 ## Quickstart Guide
+
 As of v.2.0, you no longer need to manually download and install model grids; `kiauhoku` will automatically download any missing grid from Zenodo when you try to load it!
+
 ```python
 import kiauhoku as kh
 grid = kh.load_interpolator('fastlaunch')
 ```
+
 After this, the `fastlaunch` grid will be installed in `~/.kiauhoku/grids`. You shouldn't have to download it again after this. Note that download times will vary depending on the size of the model grid.
 
 ## How it works
@@ -70,10 +77,10 @@ Each file contains 171 evolution tracks for 0.30 <= M/Msun <= 2.00 in steps of 0
 
 3. We finally load the EEP-based tracks into a `kiauhoku.stargrid.StarGridInterpolator` object. The `StarGridInterpolator` is based on the DataFrameInterpolator (`DFInterpolator`) from Tim Morton's [`isochrones`][isochrones] package. It performs linear interpolation between consecutive evolution tracks for an input mass, metallicity, alpha-abundance, and either age or EEP-index. We then pickle the interpolator so it can be accessed quickly and easily.
 
-
 ## Basic Usage
 
 Once you have everything running, try doing this:  
+
 ```python
 import kiauhoku as kh
 grid = kh.load_interpolator('fastlaunch')
@@ -84,7 +91,6 @@ If it works, you should get something close to the sun. The argument to get_star
 
 Kīauhōkū comes with MCMC functionality through `emcee`. See the jupyter notebook `mcmc.ipynb` for an example.
 
-   
 ## Installing Custom Model Grids
 
 To install your own custom grid, you will want to create a setup script (see `custom_install.py` for an example). The only requirements are that your setup file contains (1) a function called `setup` that returns a pandas MultiIndexed DataFrame containing all your evolution tracks, (2) a variable `name` that is set to whatever you want your installed grid to be named, and (3) a variable `raw_grids_path` that sets the path to wherever your custom raw grid is downloaded.
@@ -94,13 +100,13 @@ The index for this DataFrame is what all the "get" functions will use to get and
 You can also use the setup file to define custom EEP functions (see `custom_install.my_RGBump`) for an example) and to tell `kiauhoku` which columns to use in its default EEP functions.
 
 Once your setup file is ready, you can install your custom grid using
+
 ```python
 import kiauhoku as kh
 kh.install_grid('custom_install')
 ```
 
 If you create a setup file for your favorite model grid and you'd like it to be public, create a pull request and I'll add you as a contributor!
-
 
 [kiauhoku github]: https://github.com/zclaytor/kiauhoku
 [zclaytor]: https://claytorastro.wixsite.com/home
