@@ -126,6 +126,8 @@ class StarGrid(pd.DataFrame):
             EEP functions must have the call signature
             function(track, eep_params), where `track` is a single track.
             If none are supplied, the default functions will be used.
+            *Added 2024-04-04: to skip any of the default EEP functions (e.g.,
+            the RGB bump), set its function in the dictionary to "skip".
 
         metric_function (callable, None): the metric function is how the EEP
             interpolator spaces the secondary EEPs. By default, the path
