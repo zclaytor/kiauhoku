@@ -114,6 +114,8 @@ def _locate_primary_eeps(track, eep_params, eep_functions=None):
     i_eep = []
     i_start = 0
     for f in eep_f.values():
+        if f == "skip": # allows certain default EEPs to be skipped
+            continue
         i_phase = f(track, eep_params, i0=i_start)
         i_eep.append(i_phase)
         i_start = i_phase
