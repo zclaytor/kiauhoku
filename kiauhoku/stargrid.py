@@ -10,6 +10,7 @@ from importlib import import_module
 import pickle
 import functools
 import tarfile
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,7 @@ import emcee
 from .utils.eep import _eep_interpolate
 from .utils.interp import DFInterpolator
 from .utils.progress_bar import parallel_progbar
-from .config import grids_path, grids_url
+from .config import grids_path, grids_url, grids_url_base, grids_version_url
 
 
 class StarGrid(pd.DataFrame):
@@ -943,7 +944,12 @@ def load_eep_params(name):
 
     return eep_params
 
-def download(name, kind="eep", create_interpolator=True):
+def download(
+        name,
+        version="latest",
+        record_no=None,
+        kind="eep", 
+        create_interpolator=True):
     '''
     Downloads model grid data from Zenodo. By default, pulls from the most
     recent version. A future version of kiauhoku will let users specify
@@ -953,6 +959,12 @@ def download(name, kind="eep", create_interpolator=True):
     ----------
     name (str): the name of the grid to be downloaded. Must be one of
         'dartmouth', 'garstec', 'mist', 'yrec', 'fastlaunch', 'slowlaunch', 'rocrit'.
+
+    version (str): the version string for the grids to be downloaded.
+        Defaults to 'latest'. Specify either `version` or `record_no`.
+
+    record_no (str or int): Zenodo record number for the grids to be downloaded.
+        `None` by default. Specify either `version` or `record_no`.
 
     kind (str, 'eep'): the kind of files to be downloaded. Can be one of
         'eep', 'full', or 'src', but default is 'eep'.
@@ -968,8 +980,20 @@ def download(name, kind="eep", create_interpolator=True):
     if not os.path.exists(grids_path):
         os.makedirs(grids_path)
 
-    # check permanent record locator to get latest version
-    r = requests.get(grids_url)
+    # determine url
+    if record_no is not None:
+        url = os.path.join(grids_url_base, f"{record_no}")
+    elif version == "latest":
+        url = grids_url
+    else:
+        try:
+            url = grids_version_url[version]
+        except KeyError:
+            raise KeyError(f"Version {version} not registered. " 
+                           f"Available versions: {list(grids_version_url.keys())}")
+
+    # check record locator to get latest version
+    r = requests.get(url)
     if r.ok:
         record_id = r.json()["id"]
         fname = f"{name}_{kind}.tar.gz"
@@ -978,13 +1002,12 @@ def download(name, kind="eep", create_interpolator=True):
         # download and extract files
         r = requests.get(my_url, stream=True)
         if r.ok:
-            block_size = 1024
-            total_size = int(r.headers.get("Content-Length", 0))/block_size
+            file_size = int(r.headers.get("Content-Length", 0))
 
             tgz_file = os.path.join(grids_path, fname)
-            with open(tgz_file, "wb") as f:
-                for data in tqdm(r.iter_content(block_size), total=total_size, unit="B", unit_scale=True):
-                    f.write(data)
+            with tqdm.wrapattr(r.raw, "read", total=file_size) as r_raw:
+                with open(tgz_file, "wb") as f:
+                    shutil.copyfileobj(r_raw, f)
 
             with tarfile.open(tgz_file) as g:
                 # safe_extract added to protect against malicious attacks made possible by a Python bug
