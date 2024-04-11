@@ -24,7 +24,7 @@ from .utils.interp import DFInterpolator
 from .utils.progress_bar import parallel_progbar
 from .config import grids_path, grids_url
 
-
+#:)
 class StarGrid(pd.DataFrame):
     '''
     StarGrid is designed to store and interact with stellar evolution tracks.
