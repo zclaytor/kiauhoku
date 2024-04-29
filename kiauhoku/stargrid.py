@@ -549,8 +549,11 @@ class StarGridInterpolator(DFInterpolator):
         for label in star_dict:
             sum_squares += (grid_df[label] - star_dict[label])**2
         sum_squares_list.append(sum_squares)
-        lowest_10 = np.argsort(sum_squares_list)[0,0:10]
-        return lowest_10,grid_df
+        lowest_50 = np.argsort(sum_squares_list)[0,0:50]
+        print(lowest_50)
+        lowest_50 = lowest_50[::-1]
+        print(lowest_50)
+        return lowest_50,grid_df
     
 
     def fit_star(self, star_dict, guess, *args,
@@ -680,7 +683,7 @@ class StarGridInterpolator(DFInterpolator):
         if 'initial_alpha' in idxrange:
             alpha_list = altrange(*idxrange['initial_alpha'], alpha_step)
             idx_list.append(alpha_list)
-        eep_list = np.arange(252, 656, eep_step)
+        eep_list = np.arange(201, 656, eep_step)
         idx_list.append(eep_list)
 
         idx_list = pd.MultiIndex.from_product(idx_list)
@@ -693,12 +696,13 @@ class StarGridInterpolator(DFInterpolator):
         
         idx_new,full_grid = self.find_closest(star_dict)
         idx_list_new = []
-        for i in range(0,10):
+        for i in range(0,len(idx_new)):
             idxs = full_grid.iloc[i].name
             idx_list_new.append(idxs)
-        
-        for idx in idx_list:
+            
+        for idx in idx_list_new:
             fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
+            print(idx)
             if fit.success:
                 some_fit = True
                 if fit.fun < best_loss:
