@@ -228,8 +228,68 @@ class StarGrid(pd.DataFrame):
         idx = self.index.droplevel('eep').drop_duplicates()
         lengths = [len(self.loc[i]) for i in idx]
         lengths = pd.DataFrame(lengths, index=idx)
+        lengths.columns = ["length"]
         return lengths
+    
 
+    def plot_eep_track_lengths(self, ax=None, xlabel='initial_mass', ylabel='initial_met', **kw):
+        '''
+        Create a grid plot colored by the length of the track at each grid point.
+
+        Parameters
+        ----------
+        ax (`plt.Axes` object, None): the Axes on which to make the plot.
+
+        xlabel (str, 'initial_mass'): the name of the level to use on the x-axis.
+
+        ylabel (str, 'initial_met'): the name of the level to use on the y-axis.
+
+        **kw: keyword arguments to be passed to `plt.pcolormesh`.
+
+        Returns
+        -------
+        im (`QuadMesh`): the mappable for the color bar.
+
+        fig (`Figure`): the parent Figure object.
+
+        ax (`Axes` or `AxesSubplot`): the `Axes` on which the plot is drawn.
+        '''
+
+        # measure lengths, get x and y axis values
+        lengths = self.get_eep_track_lengths()
+        xvals = lengths.index.get_level_values(xlabel).drop_duplicates().sort_values()
+        yvals = lengths.index.get_level_values(ylabel).drop_duplicates().sort_values()
+
+        # if the grid has any holes, put a value of 0 for the length
+        idx = pd.MultiIndex.from_product([xvals, yvals])
+        missing = idx.difference(lengths.index)
+        missing = pd.DataFrame(np.zeros(len(missing), dtype=int), index=missing, columns=["length"])
+        lengths = pd.concat([lengths, missing]).sort_index()
+
+        # reshape the lengths to a 2D grid
+        lvals = lengths.values.reshape(len(xvals), len(yvals)).T
+
+        # make plot
+        if ax is None:
+            from matplotlib.pyplot import subplots
+            fig, ax = subplots()
+        else:
+            fig = ax.get_figure()
+
+        # if no edgecolor specified, default to 'k'
+        if 'edgecolors' in kw:
+            ecs = kw.pop('edgecolors')
+        else:
+            ecs = 'k'
+
+        im = ax.pcolormesh(xvals, yvals, lvals, edgecolors=ecs, **kw)
+        ax.set(xticks=xvals, yticks=yvals, xlabel=xlabel, ylabel=ylabel,
+            xticklabels=[f"{x:g}" for x in xvals])
+
+        fig.colorbar(im, ticks=list(set(lvals.flatten())), label="Number of EEPs")
+
+        return im, fig, ax
+    
 class StarGridInterpolator(DFInterpolator):
     '''
     Stellar model grid interpolator. Built on the DataFrame Interpolator
