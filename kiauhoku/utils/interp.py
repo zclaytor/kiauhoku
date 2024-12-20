@@ -790,7 +790,6 @@ class DFInterpolator(object):
     """
 
     def __init__(self, df, filename=None, recalc=False, is_full=False):
-        print("calling DFInterpolator")
         self.filename = filename
         self.is_full = is_full
         self.columns = list(df.columns)
@@ -849,117 +848,42 @@ class DFInterpolator(object):
             icols = np.arange(self.n_columns)
         else:
             icols = np.array([self.column_index[col] for col in cols])
-        args = (p, self.grid, icols, self.index_columns)
 
         if self.ndim == 2:
-            args = (p[0], p[1], self.grid, icols, self.index_columns[0], self.index_columns[1])
-            if (isinstance(p[0], float) or isinstance(p[0], int)) and (
-                isinstance(p[1], float) or isinstance(p[1], int)
-            ):
+            if all([isinstance(p_i, (int, float)) for p_i in p]):
+                args = (*p, self.grid, icols, *self.index_columns)
                 values = interp_value_2d(*args)
             else:
                 b = np.broadcast(*p)
                 pp = [np.atleast_1d(np.resize(x, b.shape)).astype(float) for x in p]
-                args = (*pp, self.grid, icols, *self.index_columns)
-                values = interp_values_2d(*args)
+                values = interp_values_2d(*pp, self.grid, icols, *self.index_columns)
         if self.ndim == 3:
-            args = (
-                p[0],
-                p[1],
-                p[2],
-                self.grid,
-                icols,
-                self.index_columns[0],
-                self.index_columns[1],
-                self.index_columns[2],
-            )
-            if (
-                (isinstance(p[0], float) or isinstance(p[0], int))
-                and (isinstance(p[1], float) or isinstance(p[1], int))
-                and (isinstance(p[2], float) or isinstance(p[2], int))
-            ):
+            if all([isinstance(p_i, (int, float)) for p_i in p]):
+                args = (*p, self.grid, icols, *self.index_columns)
                 values = interp_value_3d(*args)
             else:
                 b = np.broadcast(*p)
                 pp = [np.atleast_1d(np.resize(x, b.shape)).astype(float) for x in p]
-                args = (*pp, self.grid, icols, *self.index_columns)
-                values = interp_values_3d(*args)
+                values = interp_values_3d(*pp, self.grid, icols, *self.index_columns)
         elif self.ndim == 4:
-            args = (
-                p[0],
-                p[1],
-                p[2],
-                p[3],
-                self.grid,
-                icols,
-                self.index_columns[0],
-                self.index_columns[1],
-                self.index_columns[2],
-                self.index_columns[3],
-            )
-            if (
-                (isinstance(p[0], float) or isinstance(p[0], int))
-                and (isinstance(p[1], float) or isinstance(p[1], int))
-                and (isinstance(p[2], float) or isinstance(p[2], int))
-                and (isinstance(p[3], float) or isinstance(p[3], int))
-            ):
+            if all([isinstance(p_i, (int, float)) for p_i in p]):
+                args = (*p, self.grid, icols, *self.index_columns)
                 values = interp_value_4d(*args)
             else:
                 b = np.broadcast(*p)
                 pp = [np.atleast_1d(np.resize(x, b.shape)).astype(float) for x in p]
                 values = interp_values_4d(*pp, self.grid, icols, *self.index_columns)
         elif self.ndim == 5:
-            args = (
-                p[0],
-                p[1],
-                p[2],
-                p[3],
-                p[4],
-                self.grid,
-                icols,
-                self.index_columns[0],
-                self.index_columns[1],
-                self.index_columns[2],
-                self.index_columns[3],
-                self.index_columns[4],                
-            )
-            if (
-                (isinstance(p[0], float) or isinstance(p[0], int))
-                and (isinstance(p[1], float) or isinstance(p[1], int))
-                and (isinstance(p[2], float) or isinstance(p[2], int))
-                and (isinstance(p[3], float) or isinstance(p[3], int))
-                and (isinstance(p[4], float) or isinstance(p[4], int))
-            ):
+            if all([isinstance(p_i, (int, float)) for p_i in p]):
+                args = (*p, self.grid, icols, *self.index_columns)
                 values = interp_value_5d(*args)
             else:
                 b = np.broadcast(*p)
                 pp = [np.atleast_1d(np.resize(x, b.shape)).astype(float) for x in p]
                 values = interp_values_5d(*pp, self.grid, icols, *self.index_columns)
         elif self.ndim == 6:
-            args = (
-                p[0],
-                p[1],
-                p[2],
-                p[3],
-                p[4],
-                p[5],
-                self.grid,
-                icols,
-                self.index_columns[0],
-                self.index_columns[1],
-                self.index_columns[2],
-                self.index_columns[3],
-                self.index_columns[4],
-                self.index_columns[5],               
-            )
-            if (
-                (isinstance(p[0], float) or isinstance(p[0], int))
-                and (isinstance(p[1], float) or isinstance(p[1], int))
-                and (isinstance(p[2], float) or isinstance(p[2], int))
-                and (isinstance(p[3], float) or isinstance(p[3], int))
-                and (isinstance(p[4], float) or isinstance(p[4], int))
-                and (isinstance(p[5], float) or isinstance(p[5], int))
-            ):
+            if all([isinstance(p_i, (int, float)) for p_i in p]):
+                args = (*p, self.grid, icols, *self.index_columns)
                 values = interp_value_6d(*args)
             else:
                 b = np.broadcast(*p)
