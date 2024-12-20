@@ -386,16 +386,20 @@ class StarGridInterpolator(DFInterpolator):
         '''
         if not isinstance(index, tuple):
             index = tuple(index)
-            
-        if index in self.index:
-            star_values = self._get_star_eep(index)
-        else:
-            star_values = self(index)
 
-        if len(np.shape(index)) == 1:
+        # Commenting this out 2024-12-20 because it interferes with 6D interpolation... fix later
+        # if index in self.index:
+        #     star_values = self._get_star_eep(index)
+        # else:
+        #     star_values = self(index)
+        star_values = self(index)
+
+        if len(star_values.shape) == 1:
             star = pd.Series(star_values, index=self.columns)
         else:
             star = pd.DataFrame(star_values, columns=self.columns)
+            #star.index = pd.MultiIndex.from_tuples(tuple(zip(*index)), names=self.index.names)
+            # this is nice, but fails if index is heterogeneous.
 
         return star
 
