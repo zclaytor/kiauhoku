@@ -3,17 +3,56 @@ import numpy as np
 from numpy.polynomial.polynomial import polyval
 import pandas as pd
 
-"""
+'''
 This module calculates the habitable zone (HZ) and continuous habitable zone (CHZ)
 boundaries for each stellar model evolutionary phase. This is accomplished using
 two main functions, add_HZ and add_HZ_custom. Both functions accept a StarGrid
 object as input which contains a stellar model grid converted to EEP basis.
 add_HZ uses various default HZ prescriptions to calculate the HZ and CHZ, while
 add_HZ_custom accepts coefficients as an input to calculate a custom defined HZ.
-"""
+'''
 
 # Use default HZ prescriptions
 def add_HZ(grid,source='K14',which=2,simple=False,wcl=False,chz=True,hzl=2):
+	'''
+    Parameters
+    ----------
+    grid (StarGrid object): EEP-based stellar model grid stored as a StarGrid object.
+
+    source (str): Source to use for HZ prescription. Options are:
+
+    			  K93 - Kasting et al. 1993
+    			  K13 - Kopparapu et al. 2013
+    			  K14 - Kopparapu et al. 2014
+    			  W17 - Wolf et al. 2017
+    			  R18 - Ramirez & Kaltenegger 2018
+	
+	which (int): For the selected source, which HZ prescription to use. Options, if
+				 available, are:
+
+				 1 - Conservative HZ, usually moist greenhouse IHZ and maximum
+				 	 greenhouse OHZ
+				 2 - Optimistic HZ, usually runaway greenhouse IHZ and maximum
+				 	 greenhouse OHZ
+				 3 - Empirical HZ, recent Venus IHZ and early Mars OHZ
+
+	simple (bool): If True, scale HZ boundaries by luminosity only, neglecting
+				   dependence on Teff.
+
+	wcl (bool): If True, include Turbet et al. 2023 water condensation limit in HZ
+				calculation.
+
+	chz (bool): If True, calculate CHZ evolution.
+
+	hzl (scalar): Habitable zone lifetime, in Gyrs, to use when calculating CHZ.
+
+	Returns
+    -------
+    grid (StarGrid): grid of EEP-based evolution tracks with added columns for HZ
+    				 and CHZ boundaries.
+
+    '''
+
 	# Check if grid is a StarGrid object. More robust way?
 	try:
 		gname = grid.name
@@ -109,6 +148,41 @@ def add_HZ(grid,source='K14',which=2,simple=False,wcl=False,chz=True,hzl=2):
 
 # Use custom HZ prescription
 def add_HZ_custom(grid,inner,outer,Trange=None,Tref=None,wcl=False,chz=True,hzl=2):
+	'''
+    Parameters
+    ----------
+    grid (StarGrid object): EEP-based stellar model grid stored as a StarGrid object.
+
+    inner (scalar or 1D array): Scalar or array of polynomial coefficients defining
+    							IHZ prescription in terms of stellar effective flux
+    							relative to Earth (Seff). Both inner and outer must
+    							be the same type.
+
+    outer (scalar or 1D array): Scalar or array of polynomial coefficients defining
+    							OHZ prescription in terms of stellar effective flux
+    							relative to Earth (Seff). Both inner and outer must
+    							be the same type.
+
+	Trange (tuple or 1D array): Range of Teff values that HZ prescription is defined
+								for (i.e. [2600,7200]).
+
+	Tref (scalar): Reference Teff for HZ prescription that defines the polynomial
+				   intercept (i.e. this is 5780 K for K14).
+
+	wcl (bool): If True, include Turbet et al. 2023 water condensation limit in HZ
+				calculation.
+
+	chz (bool): If True, calculate CHZ evolution.
+
+	hzl (scalar): Habitable zone lifetime, in Gyrs, to use when calculating CHZ.
+
+	Returns
+    -------
+    grid (StarGrid): grid of EEP-based evolution tracks with added columns for HZ
+    				 and CHZ boundaries.
+
+    '''
+
 	# Check if grid is a StarGrid object. More robust way?
 	try:
 		gname = grid.name
@@ -196,6 +270,31 @@ def add_HZ_custom(grid,inner,outer,Trange=None,Tref=None,wcl=False,chz=True,hzl=
 
 # Calc HZ using Teff scaling
 def calc_HZ(Tstar,lum,c1,c2,Trange):
+	'''
+    Parameters
+    ----------
+    Tstar (Series): Multiindex series containing Teff column from model grid shifted
+    				by Tref.
+
+    lum (Series): Multiindex series containing luminosity column from model grid.
+
+    c1 (1D array): Array of polynomial coefficients defining IHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+    c2 (1D array): Array of polynomial coefficients defining OHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+	Trange (tuple or 1D array): Range of Teff values that HZ prescription is defined
+								for, shifted by Tref.
+
+	Returns
+    -------
+    ihz (Series): Multiindex series containing IHZ boundary at each EEP.
+
+    ohz (Series): Multiindex series containing OHZ boundary at each EEP.
+
+    '''
+
 	# Scale by Teff and luminosity inside Teff range, else scale by luminosity only 
 	seff1 = Tstar.apply(lambda x: polyval(x, c1) if Trange[0]<=x<=Trange[1] else (polyval(Trange[0], c1) if x<Trange[0] else polyval(Trange[1], c1)))
 	seff2 = Tstar.apply(lambda x: polyval(x, c2) if Trange[0]<=x<=Trange[1] else (polyval(Trange[0], c2) if x<Trange[0] else polyval(Trange[1], c2)))
@@ -207,6 +306,25 @@ def calc_HZ(Tstar,lum,c1,c2,Trange):
 
 # Calc HZ using luminosity scaling
 def calc_HZ_simple(lum,c1,c2):
+	'''
+    Parameters
+    ----------
+    lum (Series): Multiindex series containing luminosity column from model grid.
+
+    c1 (scalar): Scalar defining IHZ in terms of stellar effective flux relative
+    			 to Earth (Seff).
+
+    c2 (scalar): Scalar defining OHZ in terms of stellar effective flux relative
+    			 to Earth (Seff).
+
+	Returns
+    -------
+    ihz (Series): Multiindex series containing IHZ boundary at each EEP.
+
+    ohz (Series): Multiindex series containing OHZ boundary at each EEP.
+
+    '''
+
 	ihz = (lum/c1)**0.5
 	ohz = (lum/c2)**0.5
 
@@ -218,6 +336,22 @@ def calc_HZ_simple(lum,c1,c2):
 
 # Calc CHZ for input habitable zone time limit
 def calc_CHZ(hz_grid,hzl,zams):
+	'''
+    Parameters
+    ----------
+    hz_grid (series): Multiindex dataframe containing age, IHZ, and OHZ for EEP-based
+    				  grid.
+
+    hzl (scalar): Habitable zone lifetime, in Gyrs, to use when calculating CHZ.
+
+    zams (int): EEP value for ZAMS.
+
+	Returns
+    -------
+    chz (dataframe): Multiindex dataframe containing CHZ boundaries at each EEP.
+
+    '''
+
 	chz = pd.DataFrame(columns=['ICHZ', 'OCHZ'], index=hz_grid.index)
 
 	# Group by all index levels except for the 'eep' level for iteration by model
@@ -283,6 +417,33 @@ def calc_CHZ(hz_grid,hzl,zams):
 
 # Kasting et al. 1993
 def K93(teff,which):
+	'''
+    Parameters
+    ----------
+    teff (Series): Multiindex series containing Teff column from model grid.
+
+    which (int): HZ prescription to use. Options are:
+
+				 1 - Conservative HZ, moist greenhouse IHZ and maximum greenhouse OHZ
+				 2 - Optimistic HZ, runaway greenhouse IHZ and maximum greenhouse OHZ
+				 3 - Empirical HZ, recent Venus IHZ and early Mars OHZ
+
+	Returns
+    -------
+	Tstar (Series): Multiindex series containing Teff column from model grid shifted
+    				by Tref.
+
+    c1 (1D array): Array of polynomial coefficients defining IHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+    c2 (1D array): Array of polynomial coefficients defining OHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+	Trange (tuple or 1D array): Range of Teff values that HZ prescription is defined
+								for, shifted by Tref.
+
+    '''
+
 	# Range = 3700 - 7200 K
 	Tlo = 3700
 	Thi = 7200
@@ -322,6 +483,33 @@ def K93(teff,which):
 
 # Kopparapu et al. 2013
 def K13(teff,which):
+	'''
+    Parameters
+    ----------
+    teff (Series): Multiindex series containing Teff column from model grid.
+
+    which (int): HZ prescription to use. Options are:
+
+				 1 - Conservative HZ, moist greenhouse IHZ and maximum greenhouse OHZ
+				 2 - Optimistic HZ, runaway greenhouse IHZ and maximum greenhouse OHZ
+				 3 - Empirical HZ, recent Venus IHZ and early Mars OHZ
+
+	Returns
+    -------
+	Tstar (Series): Multiindex series containing Teff column from model grid shifted
+    				by Tref.
+    
+    c1 (1D array): Array of polynomial coefficients defining IHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+    c2 (1D array): Array of polynomial coefficients defining OHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+	Trange (tuple or 1D array): Range of Teff values that HZ prescription is defined
+								for, shifted by Tref.
+
+    '''
+
 	# Range = 2600 - 7200 K
 	Tlo = 2600
 	Thi = 7200
@@ -361,6 +549,32 @@ def K13(teff,which):
 
 # Kopparapu et al. 2014
 def K14(teff,which):
+	'''
+    Parameters
+    ----------
+    teff (Series): Multiindex series containing Teff column from model grid.
+
+    which (int): HZ prescription to use. Options are:
+
+				 2 - Optimistic HZ, runaway greenhouse IHZ and maximum greenhouse OHZ
+				 3 - Empirical HZ, recent Venus IHZ and early Mars OHZ
+
+	Returns
+    -------
+	Tstar (Series): Multiindex series containing Teff column from model grid shifted
+    				by Tref.
+    
+    c1 (1D array): Array of polynomial coefficients defining IHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+    c2 (1D array): Array of polynomial coefficients defining OHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+	Trange (tuple or 1D array): Range of Teff values that HZ prescription is defined
+								for, shifted by Tref.
+
+    '''
+
 	# Range = 2600 - 7200 K
 	Tlo = 2600
 	Thi = 7200
@@ -400,6 +614,27 @@ def K14(teff,which):
 
 # Wolf et al. 2017
 def W17(teff):
+	'''
+    Parameters
+    ----------
+    teff (Series): Multiindex series containing Teff column from model grid.
+
+	Returns
+    -------
+	Tstar (Series): Multiindex series containing Teff column from model grid shifted
+    				by Tref.
+    
+    c1 (1D array): Array of polynomial coefficients defining IHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+    c2 (1D array): Array of polynomial coefficients defining OHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+	Trange (tuple or 1D array): Range of Teff values that HZ prescription is defined
+								for, shifted by Tref.
+
+    '''
+
 	# Range = 4900 - 6600 K
 	Tlo = 4900
 	Thi = 6600
@@ -421,6 +656,32 @@ def W17(teff):
 
 # Ramirez & Kaltenegger 2018
 def R18(teff,which):
+	'''
+    Parameters
+    ----------
+    teff (Series): Multiindex series containing Teff column from model grid.
+
+    which (int): HZ prescription to use. Options are:
+
+				 2 - Optimistic HZ, runaway greenhouse IHZ and maximum greenhouse OHZ
+				 3 - Empirical HZ, recent Venus IHZ and early Mars OHZ
+
+	Returns
+    -------
+	Tstar (Series): Multiindex series containing Teff column from model grid shifted
+    				by Tref.
+    
+    c1 (1D array): Array of polynomial coefficients defining IHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+    c2 (1D array): Array of polynomial coefficients defining OHZ prescription in terms
+    			   of stellar effective flux relative to Earth (Seff).
+
+	Trange (tuple or 1D array): Range of Teff values that HZ prescription is defined
+								for, shifted by Tref.
+
+    '''
+
 	# Range = 2600 - 10000 K
 	Tlo = 2600
 	Thi = 10000
@@ -452,6 +713,27 @@ def R18(teff,which):
 
 # Turbet et al. 2023
 def T23(teff,lum,ihz,zams,simple):
+	'''
+    Parameters
+    ----------
+    teff (Series): Multiindex series containing Teff column from model grid.
+
+    lum (Series): Multiindex series containing luminosity column from model grid.
+
+    ihz (Series): Multiindex series containing IHZ boundary at each EEP.
+
+    zams (int): EEP value for ZAMS.
+
+    simple (bool): If True, scale HZ boundaries by luminosity only, neglecting
+				   dependence on Teff.
+
+	Returns
+    -------
+	ihz (Series): Multiindex series containing IHZ boundary at each EEP, taking
+				  into account water condensation limit.
+
+    '''
+
 	# Range = 2600 - 7200 K
 	Tlo = 2600
 	Thi = 7200
