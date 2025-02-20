@@ -76,7 +76,7 @@ def add_HZ(grid,source='K14',which=2,simple=False,wcl=False,chz=True,hzl=2):
 		teffstr = grid.eep_params['log_teff']
 		teff = 10**grid[teffstr]
 
-		zams = grid.eep_params['intervals'][0]
+		zams = grid.eep_params['intervals'][0]+1
 
 	# Get source HZ parameterization.
 	if source in ('K93','k93'):
@@ -206,7 +206,7 @@ def add_HZ_custom(grid,inner,outer,Trange=None,Tref=None,wcl=False,chz=True,hzl=
 		teffstr = grid.eep_params['log_teff']
 		teff = 10**grid[teffstr]
 
-		zams = grid.eep_params['intervals'][0]
+		zams = grid.eep_params['intervals'][0]+1
 
 	# Set coefficient variables, make scalar inputs the same type
 	c1 = np.float64(inner)
