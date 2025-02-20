@@ -1,8 +1,3 @@
-from warnings import warn
-import numpy as np
-from numpy.polynomial.polynomial import polyval
-import pandas as pd
-
 '''
 This module calculates the habitable zone (HZ) and continuous habitable zone (CHZ)
 boundaries for each stellar model evolutionary phase. This is accomplished using
@@ -12,8 +7,15 @@ add_HZ uses various default HZ prescriptions to calculate the HZ and CHZ, while
 add_HZ_custom accepts coefficients as an input to calculate a custom defined HZ.
 '''
 
+from warnings import warn
+
+import numpy as np
+from numpy.polynomial.polynomial import polyval
+import pandas as pd
+
+
 # Use default HZ prescriptions
-def add_HZ(grid,source='K14',which=2,simple=False,wcl=False,chz=True,hzl=2):
+def add_HZ(grid,source='K14', which=2, simple=False, wcl=False, chz=True, hzl=2):
 	'''
     Parameters
     ----------
@@ -147,7 +149,7 @@ def add_HZ(grid,source='K14',which=2,simple=False,wcl=False,chz=True,hzl=2):
 	return grid
 
 # Use custom HZ prescription
-def add_HZ_custom(grid,inner,outer,Trange=None,Tref=None,wcl=False,chz=True,hzl=2):
+def add_HZ_custom(grid, inner, outer, Trange=None, Tref=None, wcl=False, chz=True, hzl=2):
 	'''
     Parameters
     ----------
@@ -269,7 +271,7 @@ def add_HZ_custom(grid,inner,outer,Trange=None,Tref=None,wcl=False,chz=True,hzl=
 	return grid
 
 # Calc HZ using Teff scaling
-def calc_HZ(Tstar,lum,c1,c2,Trange):
+def calc_HZ(Tstar, lum, c1, c2, Trange):
 	'''
     Parameters
     ----------
@@ -305,7 +307,7 @@ def calc_HZ(Tstar,lum,c1,c2,Trange):
 	return ihz, ohz
 
 # Calc HZ using luminosity scaling
-def calc_HZ_simple(lum,c1,c2):
+def calc_HZ_simple(lum, c1, c2):
 	'''
     Parameters
     ----------
@@ -335,7 +337,7 @@ def calc_HZ_simple(lum,c1,c2):
 	return ihz, ohz
 
 # Calc CHZ for input habitable zone time limit
-def calc_CHZ(hz_grid,hzl,zams):
+def calc_CHZ(hz_grid, hzl, zams):
 	'''
     Parameters
     ----------
@@ -416,7 +418,7 @@ def calc_CHZ(hz_grid,hzl,zams):
 	return chz
 
 # Kasting et al. 1993
-def K93(teff,which):
+def K93(teff, which):
 	'''
     Parameters
     ----------
@@ -482,7 +484,7 @@ def K93(teff,which):
 	return Tstar, c1, c2, Trange
 
 # Kopparapu et al. 2013
-def K13(teff,which):
+def K13(teff, which):
 	'''
     Parameters
     ----------
@@ -548,7 +550,7 @@ def K13(teff,which):
 	return Tstar, c1, c2, Trange
 
 # Kopparapu et al. 2014
-def K14(teff,which):
+def K14(teff, which):
 	'''
     Parameters
     ----------
@@ -655,7 +657,7 @@ def W17(teff):
 	return Tstar, c1, c2, Trange
 
 # Ramirez & Kaltenegger 2018
-def R18(teff,which):
+def R18(teff, which):
 	'''
     Parameters
     ----------
@@ -712,7 +714,7 @@ def R18(teff,which):
 	return Tstar, c1, c2, Trange
 
 # Turbet et al. 2023
-def T23(teff,lum,ihz,zams,simple):
+def T23(teff, lum, ihz, zams, simple):
 	'''
     Parameters
     ----------
