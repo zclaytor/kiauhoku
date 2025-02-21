@@ -10,6 +10,7 @@ from importlib import import_module
 import pickle
 import functools
 import tarfile
+import itertools
 
 import numpy as np
 import pandas as pd
@@ -18,7 +19,6 @@ from scipy.optimize import minimize
 import requests
 from tqdm import tqdm
 import emcee
-import itertools
 
 from .utils.eep import _eep_interpolate
 from .utils.interp import DFInterpolator
@@ -207,7 +207,58 @@ class StarGrid(pd.DataFrame):
         eeps = np.arange(len(ints)) + np.cumsum(ints)
         
         return eeps
+    
+    def find_closest(self, star_dict, n=10, method="mse", **kw):
+        '''
+        Return the `n` closest models from the grid, where closeness is 
+        determined using `method`
 
+        Parameters
+        ----------
+        star_dict (dict): dictionary containing label: value pairs.
+
+        n (int, 10): the number of models to return.
+
+        method (str, "mse"): the method by which closeness is measured.
+
+        **kw: keyword arguments to be passed to the chosen cost `method`.
+
+        Returns
+        -------
+        models (pandas.DataFrame): DataFrame containing the closest models.
+        '''
+        if method in ("leastsquares", "sumsquares", "meansquarederror", "mse"):
+            i_closest = self._meansquarederror(star_dict, **kw).nsmallest(n)
+        models = self.loc[i_closest]
+        return  models
+
+    def _meansquarederror(self, star_dict, scale=None):
+        '''
+        Computes the mean squared error between the given data and the grid models.
+
+        Parameters
+        ----------
+        star_dict (dict): dictionary containing label: value pairs
+
+        scale (dict, None): Optional values by which to scale the squared errors
+            before taking the mean. This could be useful if, for example, 
+            luminosity is in solar units (~1) and age is in years (~10^9 years).
+
+        Returns
+        -------
+        mse (pandas.DataFrame): the mean squared error for each grid model.
+
+        NOTE: The actual value returned is the sum of the squares of the error,
+        not the mean. SSE and MSE are identical up to a multiplicative constant,
+        so as long as the rank ordered values are used, it shouldn't matter.
+        '''
+        if scale is None:
+            error = sum([(star_dict[l] - self[l])**2 for l in star_dict])
+        else:
+            error = sum([((star_dict[l] - self[l])/scale[l])**2 for l in star_dict])
+        return error
+
+    
     def get_eep_track_lengths(self):
         '''
         This is mainly a convenience function to be used in the script
@@ -412,8 +463,8 @@ class StarGridInterpolator(DFInterpolator):
         '''
         idx = pd.MultiIndex.from_tuples([ixs for ixs in itertools.product(*self.index.levels)])
         grid_df = pd.DataFrame(index=idx, columns=self.columns)
-        grid_df.loc[grid_df.index] = self.grid.reshape(-1,self.grid.shape[-1]) #number of columns in grid
-        grid_df = grid_df.dropna()
+        grid_df.loc[grid_df.index] = self.grid.reshape(-1, self.grid.shape[-1]) #number of columns in grid
+        grid_df = StarGrid(grid_df.dropna(), name=self.name, eep_params=self.eep_params)
         return grid_df
 
     def mcmc_star(self, log_prob_fn, args,
@@ -535,26 +586,29 @@ class StarGridInterpolator(DFInterpolator):
         return sampler, output
         
     def find_closest(self, star_dict, method="leastsquares"):
-        if method == "leastsquares":
-            idx,grid_df = self.leastsquares(star_dict)
-        return idx, grid_df.iloc[idx]
+        '''
+        Return the `n` closest models from the grid, where closeness is 
+        determined using `method`
 
-    def leastsquares(self,star_dict):
+        This method essentially wraps `kiauhoku.StarGrid.find_closest`.
+
+        Parameters
+        ----------
+        star_dict (dict): dictionary containing label: value pairs.
+
+        n (int, 10): the number of models to return.
+
+        method (str, "mse"): the method by which closeness is measured.
+
+        **kw: keyword arguments to be passed to the chosen cost `method`.
+
+        Returns
+        -------
+        models (pandas.DataFrame): DataFrame containing the closest models.
         '''
-        Find the index of the 10 best fit models by minimum least squares approach
-        '''
-        sum_squares_list = []
-        grid_df = self.get_star_grid()
-        sum_squares = grid_df['teff']*0
-        for label in star_dict:
-            sum_squares += (grid_df[label] - star_dict[label])**2
-        sum_squares_list.append(sum_squares)
-        lowest_50 = np.argsort(sum_squares_list)[0,0:50]
-        print(lowest_50)
-        lowest_50 = lowest_50[::-1]
-        print(lowest_50)
-        return lowest_50,grid_df
-    
+        grid = self.get_star_grid()
+        models = grid.find_closest(star_dict, method=method)
+        return models
 
     def fit_star(self, star_dict, guess, *args,
                  loss='meansquarederror', scale=None, **kwargs
@@ -602,13 +656,7 @@ class StarGridInterpolator(DFInterpolator):
         else:
             args = (star_dict, *args)
         
-#        if guess is not None:
-#            args = (star_dict, *args)
-#            print('Guess is not None')
-#        else:
-#            smartguess_idx,smartguess_grid = self.find_closest(star_dict)
-#            guess = smartguess_grid.name
-        
+       
         result = minimize(loss_function, guess, args=args, method='Nelder-Mead', **kwargs)
 
         return result
