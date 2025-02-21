@@ -24,7 +24,7 @@ from .utils.interp import DFInterpolator
 from .utils.progress_bar import parallel_progbar
 from .config import grids_path, grids_url
 
-#:)
+
 class StarGrid(pd.DataFrame):
     '''
     StarGrid is designed to store and interact with stellar evolution tracks.
@@ -872,7 +872,7 @@ def install_grid(script, kind='raw'):
         grids = from_pandas(grids, name=module.name)
 
         # Save full grid to file
-        full_save_path = os.path.join(path, f'{module.name}_full_grid.pqt')
+        full_save_path = os.path.join(path, f'{module.name}_full.pqt')
         print(f'Saving to {full_save_path}')
         grids.to_parquet(full_save_path)
 
@@ -897,7 +897,7 @@ def install_grid(script, kind='raw'):
         eeps = from_pandas(eeps, name=module.name)
 
     # Save EEP grid to file
-    eep_save_path = os.path.join(path, f'{module.name}_eep_grid.pqt')
+    eep_save_path = os.path.join(path, f'{module.name}_eep.pqt')
     print(f'Saving to {eep_save_path}')
     eeps.to_parquet(eep_save_path)
 
@@ -930,7 +930,7 @@ def load_grid(name=None, path=None, kind='eep'):
                 eep_params = None
         else:
             eep_params = None
-        file_path = os.path.join(grids_path, name, f'{name}_{kind}_grid.pqt')
+        file_path = os.path.join(grids_path, name, f'{name}_{kind}.pqt')
     else:
         file_path = path
         
