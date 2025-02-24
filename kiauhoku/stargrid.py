@@ -18,7 +18,6 @@ from scipy.optimize import minimize
 import requests
 from tqdm import tqdm
 import emcee
-import itertools
 
 from .utils.eep import _eep_interpolate
 from .utils.interp import DFInterpolator
@@ -265,43 +264,6 @@ class StarGridInterpolator(DFInterpolator):
         maxs = [idx.get_level_values(n).max() for n in idx.names]
         return pd.Series(zip(mins, maxs), index=idx.names)
 
-    def get_index_values(self, label):
-        '''Returns the values of the index specified by `label`.
-        '''
-        return self.index_columns[self.index_names.index(label)].tolist()
-    
-    def idxwhere(self, label, value):
-        '''
-        Returns the index where self.index(label) == value.
-        This is a wrapper for `list.index`, where the list
-        is the MultiIndex level values.
-        '''
-        return self.get_index_values(label).index(value)
-    
-    def _get_track(self, index):
-        '''
-        Return a track from the grid if there is an exact match, 
-        rather than interpolating.
-
-        Note that this assumes `index in self.index_names` is True.
-        '''
-        names = self.index_names[:self.ndim-1]
-        idx = tuple([self.idxwhere(l, i) for l, i in zip(names, index)])
-        data = self.grid[idx]
-        return data
-    
-    def _get_star_eep(self, index):
-        '''
-        Return a point from the grid if there is an exact match, 
-        rather than interpolating.
-
-        Note that this assumes `index in self.index_names` is True.        
-        '''
-        names = self.index_names
-        idx = tuple([self.idxwhere(l, i) for l, i in zip(names, index)])
-        data = self.grid[idx]
-        return data
-    
     def get_primary_eeps(self):
         '''Return indices of Primary EEPs in the EEP-based tracks.
         '''
@@ -322,14 +284,8 @@ class StarGridInterpolator(DFInterpolator):
 
         >>> star = grid.get_star_eep((0.987, 0.2, 350))
         '''
-        if not isinstance(index, tuple):
-            index = tuple(index)
-            
-        if index in self.index:
-            star_values = self._get_star_eep(index)
-        else:
-            star_values = self(index)
 
+        star_values = self(index)
         if len(np.shape(index)) == 1:
             star = pd.Series(star_values, index=self.columns)
         else:
@@ -391,35 +347,19 @@ class StarGridInterpolator(DFInterpolator):
 
         >>> star = grid.get_track((0.987, 0.2))
         '''
-        if not isinstance(index, tuple):
-            index = tuple(index)
 
-        if index in self.index.droplevel(-1):
-            star_values = self._get_track(index)
-        else:
-            num_eeps = self.max_eep + 1
-            ones_arr = np.ones(num_eeps)
-            idx = [i*ones_arr for i in index] + [np.arange(num_eeps)]
-            star_values = self(idx)
-            
+        num_eeps = self.max_eep + 1
+        ones_arr = np.ones(num_eeps)
+        idx = [i*ones_arr for i in index] + [np.arange(num_eeps)]
+        star_values = self(idx)
         track = StarGrid(star_values, columns=self.columns,
                          name=self.name, eep_params=self.eep_params)
         return track
-    
-    def get_star_grid(self):
-        '''
-        Returns a pandas dataframe of the model grid for each mass & met combindation, indexed by EEP
-        '''
-        idx = pd.MultiIndex.from_tuples([ixs for ixs in itertools.product(*self.index.levels)])
-        grid_df = pd.DataFrame(index=idx, columns=self.columns)
-        grid_df.loc[grid_df.index] = self.grid.reshape(-1,self.grid.shape[-1]) #number of columns in grid
-        grid_df = grid_df.dropna()
-        return grid_df
 
     def mcmc_star(self, log_prob_fn, args,
         pos0=None, initial_guess=None, guess_width=None,
         n_walkers=None, n_burnin=0, n_iter=500,
-        progress=True, save_path=None, **kwargs,
+        save_path=None, **kwargs,
     ):
         '''
         Uses emcee to sample stellar models from the grid.
@@ -462,8 +402,6 @@ class StarGridInterpolator(DFInterpolator):
 
         n_iter (int, optional): number of sample steps. Default: 500.
 
-        progress (bool, optional): whether to display progress bar. Default: True.
-
         save_path (str, optional): You may optionally specify a path to a
             CSV or Parquet file to save the sampler output as a DataFrame.
             Use of Parquet requires that you have pyarrow or another parquet-
@@ -504,13 +442,13 @@ class StarGridInterpolator(DFInterpolator):
 
         # Run burn-in stage
         if n_burnin > 0:
-            pos, prob, state, blobs = sampler.run_mcmc(pos0, n_burnin, progress=progress)
+            pos, prob, state, blobs = sampler.run_mcmc(pos0, n_burnin, progress=True)
             sampler.reset()
         else:
             pos = pos0
 
         # Run sampling stage
-        pos, prob, state, blobs = sampler.run_mcmc(pos, n_iter, progress=progress)
+        pos, prob, state, blobs = sampler.run_mcmc(pos, n_iter, progress=True)
 
         samples = pd.DataFrame(sampler.flatchain, columns=self.index.names)
         blobs = sampler.get_blobs(flat=True)
@@ -533,28 +471,6 @@ class StarGridInterpolator(DFInterpolator):
                 )
 
         return sampler, output
-        
-    def find_closest(self, star_dict, method="leastsquares"):
-        if method == "leastsquares":
-            idx,grid_df = self.leastsquares(star_dict)
-        return idx, grid_df.iloc[idx]
-
-    def leastsquares(self,star_dict):
-        '''
-        Find the index of the 10 best fit models by minimum least squares approach
-        '''
-        sum_squares_list = []
-        grid_df = self.get_star_grid()
-        sum_squares = grid_df['teff']*0
-        for label in star_dict:
-            sum_squares += (grid_df[label] - star_dict[label])**2
-        sum_squares_list.append(sum_squares)
-        lowest_50 = np.argsort(sum_squares_list)[0,0:50]
-        print(lowest_50)
-        lowest_50 = lowest_50[::-1]
-        print(lowest_50)
-        return lowest_50,grid_df
-    
 
     def fit_star(self, star_dict, guess, *args,
                  loss='meansquarederror', scale=None, **kwargs
@@ -601,20 +517,13 @@ class StarGridInterpolator(DFInterpolator):
             args = (star_dict, scale, *args)
         else:
             args = (star_dict, *args)
-        
-#        if guess is not None:
-#            args = (star_dict, *args)
-#            print('Guess is not None')
-#        else:
-#            smartguess_idx,smartguess_grid = self.find_closest(star_dict)
-#            guess = smartguess_grid.name
-        
+
         result = minimize(loss_function, guess, args=args, method='Nelder-Mead', **kwargs)
 
         return result
 
     def gridsearch_fit(self, star_dict, *args, scale=None, tol=1e-6,
-                    mass_step=0.1, met_step=0.2, alpha_step=0.2, eep_step=50, 
+                    mass_step=0.1, met_step=0.2, alpha_step=0.2, eep_step=40, 
                     verbose=True, **kwargs):
         '''
         Aggressively fit a star using `scipy.optimize.minimize` across the
@@ -683,26 +592,29 @@ class StarGridInterpolator(DFInterpolator):
         if 'initial_alpha' in idxrange:
             alpha_list = altrange(*idxrange['initial_alpha'], alpha_step)
             idx_list.append(alpha_list)
-        eep_list = np.arange(201, 656, eep_step)
+        eep_list = np.arange(202, 656, eep_step)
         idx_list.append(eep_list)
 
+        #idx_list = pd.MultiIndex.from_product(idx_list)
+        
+        # multi_index = pd.MultiIndex.from_product(idx_list)
         idx_list = pd.MultiIndex.from_product(idx_list)
+
+        # Reverse the MultiIndex
+        # reversed_idx_list = list(reversed(multi_index))
+        # idx_list = pd.MultiIndex.from_tuples(reversed_idx_list)
         
-        
+        # if self.name == 'dart':  # Check the model name
+        #     print('dart')
+
+        #     idx_list = idx_list.loc[np.linspace(0.3,2,35).round(2),[-1,-0.5,0,0.5],:]
+
         # Loop through indices searching for fit
         best_loss = 1e10
         some_fit = False
         good_fit = False
-        
-        idx_new,full_grid = self.find_closest(star_dict)
-        idx_list_new = []
-        for i in range(0,len(idx_new)):
-            idxs = full_grid.iloc[i].name
-            idx_list_new.append(idxs)
-            
-        for idx in idx_list_new:
+        for idx in idx_list:
             fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
-            print(idx)
             if fit.success:
                 some_fit = True
                 if fit.fun < best_loss:
@@ -713,17 +625,6 @@ class StarGridInterpolator(DFInterpolator):
                         if verbose:
                             print(f'{self.name}: success!')
                         break
-#        fit = self.fit_star(star_dict,guess=None,*args,scale=scale,**kwargs)
-#        if fit.success:
-#            some_fit = True
-#            if fit.fun < best_loss:
-#                best_fit = fit
-#                best_loss = fit.fun
-#                if fit.fun <= tol:
-#                    good_fit = True
-#                    if verbose:
-#                        print(f'{self.name}: success!')
-#                    #break
 
         # Check to see how the fit did, print comments if desired.
         if not some_fit:
@@ -759,9 +660,17 @@ class StarGridInterpolator(DFInterpolator):
         -------
         mean squared error as a float.
         '''
-
+        #check end of grid from index
+        bounds=[(0.6, 1.999999), (-1, 0.5), (201, 656)]
+        if any(index[i] < bounds[i][0] or index[i] > bounds[i][1] for i in range(len(index))):
+            #print('out of bounds')
+            return np.inf
+        
         star = self.get_star_eep(index)
         sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
+        if np.isnan(sq_err).any():
+            #print("Invalid value encountered")
+            return np.inf
 
         if scale:
             sq_err /= np.array(scale)**2
@@ -1045,23 +954,7 @@ def download(name, kind="eep", create_interpolator=True):
                     f.write(data)
 
             with tarfile.open(tgz_file) as g:
-                # safe_extract added to protect against malicious attacks made possible by a Python bug
-                def is_within_directory(directory, target):
-                    abs_directory = os.path.abspath(directory)
-                    abs_target = os.path.abspath(target)
-                    prefix = os.path.commonprefix([abs_directory, abs_target])
-                    return prefix == abs_directory
-                
-                def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
-                    for member in tar.getmembers():
-                        member_path = os.path.join(path, member.name)
-                        if not is_within_directory(path, member_path):
-                            raise Exception("Attempted Path Traversal in Tar File")
-                
-                    tar.extractall(path, members, numeric_owner=numeric_owner) 
-                    
-                
-                safe_extract(g, grids_path)
+                g.extractall(grids_path)
 
         else:
             raise requests.exceptions.RequestException(
