@@ -652,7 +652,7 @@ class StarGridInterpolator(DFInterpolator):
 
         return sampler, output
         
-    def find_closest(self, star_dict, n=10, method="leastsquares", **kw):
+    def find_closest(self, star_dict, n=50, method="leastsquares", **kw):
         '''
         Return the `n` closest models from the grid, where closeness is 
         determined using `method`
@@ -663,7 +663,7 @@ class StarGridInterpolator(DFInterpolator):
         ----------
         star_dict (dict): dictionary containing label: value pairs.
 
-        n (int, 10): the number of models to return.
+        n (int, 50): the number of models to return.
 
         method (str, "mse"): the method by which closeness is measured.
 
@@ -729,7 +729,7 @@ class StarGridInterpolator(DFInterpolator):
         return result
 
     def gridsearch_fit(self, star_dict, *args, scale=None, tol=1e-6,
-                    verbose=True, n=10, **kwargs):
+                    verbose=True, **kwargs):
         '''
         Fit a star using `scipy.optimize.minimize` using the `n` closest
         grid models as initial guesses.
@@ -761,8 +761,6 @@ class StarGridInterpolator(DFInterpolator):
             leave as `True` unless you're running a large list of stars AND
             you know what you're doing.
 
-        n (int, 10): the number of closest models to use as initial guesses.
-
         **kwargs: extra keyword arguments to be passed to `fit_star`.
 
         Returns
@@ -782,7 +780,7 @@ class StarGridInterpolator(DFInterpolator):
         some_fit = False
         good_fit = False
         
-        closest_matches = self.find_closest(star_dict, n=n, scale=scale)
+        closest_matches = self.find_closest(star_dict, scale=scale)
             
         for idx in closest_matches.index:
             fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
