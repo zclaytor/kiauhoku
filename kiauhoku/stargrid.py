@@ -19,13 +19,14 @@ from scipy.optimize import minimize
 import requests
 from tqdm import tqdm
 import emcee
+import itertools
 
 from .utils.eep import _eep_interpolate
 from .utils.interp import DFInterpolator
 from .utils.progress_bar import parallel_progbar
 from .config import grids_path, grids_url, grids_url_base, grids_version_url
 
-#:)
+
 class StarGrid(pd.DataFrame):
     '''
     StarGrid is designed to store and interact with stellar evolution tracks.
@@ -471,6 +472,16 @@ class StarGridInterpolator(DFInterpolator):
         track = StarGrid(star_values, columns=self.columns,
                          name=self.name, eep_params=self.eep_params)
         return track
+    
+    def get_star_grid(self):
+        '''
+        Returns a pandas dataframe of the model grid for each mass & met combindation, indexed by EEP
+        '''
+        idx = pd.MultiIndex.from_tuples([ixs for ixs in itertools.product(*self.index.levels)])
+        grid_df = pd.DataFrame(index=idx, columns=self.columns)
+        grid_df.loc[grid_df.index] = self.grid.reshape(-1,self.grid.shape[-1]) #number of columns in grid
+        grid_df = grid_df.dropna()
+        return grid_df
 
     def mcmc_star(self, log_prob_fn, args,
         pos0=None, initial_guess=None, guess_width=None,
@@ -589,6 +600,28 @@ class StarGridInterpolator(DFInterpolator):
                 )
 
         return sampler, output
+        
+    def find_closest(self, star_dict, method="leastsquares"):
+        if method == "leastsquares":
+            idx,grid_df = self.leastsquares(star_dict)
+        return idx, grid_df.iloc[idx]
+
+    def leastsquares(self,star_dict):
+        '''
+        Find the index of the 10 best fit models by minimum least squares approach
+        '''
+        sum_squares_list = []
+        grid_df = self.get_star_grid()
+        sum_squares = grid_df['teff']*0
+        for label in star_dict:
+            sum_squares += (grid_df[label] - star_dict[label])**2
+        sum_squares_list.append(sum_squares)
+        lowest_50 = np.argsort(sum_squares_list)[0,0:50]
+        print(lowest_50)
+        lowest_50 = lowest_50[::-1]
+        print(lowest_50)
+        return lowest_50,grid_df
+    
 
     def fit_star(self, star_dict, guess, *args,
                  loss='meansquarederror', scale=None, **kwargs
@@ -635,7 +668,14 @@ class StarGridInterpolator(DFInterpolator):
             args = (star_dict, scale, *args)
         else:
             args = (star_dict, *args)
-
+        
+#        if guess is not None:
+#            args = (star_dict, *args)
+#            print('Guess is not None')
+#        else:
+#            smartguess_idx,smartguess_grid = self.find_closest(star_dict)
+#            guess = smartguess_grid.name
+        
         result = minimize(loss_function, guess, args=args, method='Nelder-Mead', **kwargs)
 
         return result
@@ -710,17 +750,26 @@ class StarGridInterpolator(DFInterpolator):
         if 'initial_alpha' in idxrange:
             alpha_list = altrange(*idxrange['initial_alpha'], alpha_step)
             idx_list.append(alpha_list)
-        eep_list = np.arange(252, 606, eep_step)
+        eep_list = np.arange(201, 656, eep_step)
         idx_list.append(eep_list)
 
         idx_list = pd.MultiIndex.from_product(idx_list)
-
+        
+        
         # Loop through indices searching for fit
         best_loss = 1e10
         some_fit = False
         good_fit = False
-        for idx in idx_list:
+        
+        idx_new,full_grid = self.find_closest(star_dict)
+        idx_list_new = []
+        for i in range(0,len(idx_new)):
+            idxs = full_grid.iloc[i].name
+            idx_list_new.append(idxs)
+            
+        for idx in idx_list_new:
             fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
+            print(idx)
             if fit.success:
                 some_fit = True
                 if fit.fun < best_loss:
@@ -731,6 +780,17 @@ class StarGridInterpolator(DFInterpolator):
                         if verbose:
                             print(f'{self.name}: success!')
                         break
+#        fit = self.fit_star(star_dict,guess=None,*args,scale=scale,**kwargs)
+#        if fit.success:
+#            some_fit = True
+#            if fit.fun < best_loss:
+#                best_fit = fit
+#                best_loss = fit.fun
+#                if fit.fun <= tol:
+#                    good_fit = True
+#                    if verbose:
+#                        print(f'{self.name}: success!')
+#                    #break
 
         # Check to see how the fit did, print comments if desired.
         if not some_fit:
