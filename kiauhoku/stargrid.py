@@ -742,9 +742,8 @@ class StarGridInterpolator(DFInterpolator):
         # get the model, add the indices, and return
         fit_idx = best_fit.x
         best_model = self.get_star_eep(fit_idx)
-        for label, value in zip(self.index_range, fit_idx[:-1]):
+        for label, value in zip(self.index_names, fit_idx):
             best_model[label] = value
-        best_model['eep'] = fit_idx[-1]
         
         return best_model, best_fit
 
@@ -853,9 +852,8 @@ class StarGridInterpolator(DFInterpolator):
         # get the model, add the indices, and return
         fit_idx = best_fit.x
         best_model = self.get_star_eep(fit_idx)
-        for label, value in zip(idxrange.index, fit_idx[:-1]):
+        for label, value in zip(self.index_names, fit_idx):
             best_model[label] = value
-        best_model['eep'] = fit_idx[-1]
         
         return best_model, best_fit
     
