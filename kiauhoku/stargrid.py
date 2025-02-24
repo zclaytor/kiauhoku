@@ -523,7 +523,7 @@ class StarGridInterpolator(DFInterpolator):
         return result
 
     def gridsearch_fit(self, star_dict, *args, scale=None, tol=1e-6,
-                    mass_step=0.1, met_step=0.2, alpha_step=0.2, eep_step=40, 
+                    mass_step=0.1, met_step=0.2, alpha_step=0.2, eep_step=50, 
                     verbose=True, **kwargs):
         '''
         Aggressively fit a star using `scipy.optimize.minimize` across the
@@ -592,22 +592,16 @@ class StarGridInterpolator(DFInterpolator):
         if 'initial_alpha' in idxrange:
             alpha_list = altrange(*idxrange['initial_alpha'], alpha_step)
             idx_list.append(alpha_list)
-        eep_list = np.arange(202, 656, eep_step)
+        if self.name == 'mist':
+            eep_list = np.arange(201,610,25)
+        elif self.name == 'art':
+            eep_list = np.arange(201,951,50)
+        else: 
+            eep_list = np.arange(201, 951, 50)
         idx_list.append(eep_list)
 
-        #idx_list = pd.MultiIndex.from_product(idx_list)
-        
-        # multi_index = pd.MultiIndex.from_product(idx_list)
+
         idx_list = pd.MultiIndex.from_product(idx_list)
-
-        # Reverse the MultiIndex
-        # reversed_idx_list = list(reversed(multi_index))
-        # idx_list = pd.MultiIndex.from_tuples(reversed_idx_list)
-        
-        # if self.name == 'dart':  # Check the model name
-        #     print('dart')
-
-        #     idx_list = idx_list.loc[np.linspace(0.3,2,35).round(2),[-1,-0.5,0,0.5],:]
 
         # Loop through indices searching for fit
         best_loss = 1e10
@@ -660,23 +654,34 @@ class StarGridInterpolator(DFInterpolator):
         -------
         mean squared error as a float.
         '''
-        #check end of grid from index
-        bounds=[(0.6, 1.999999), (-1, 0.5), (201, 656)]
+        if self.name == 'mist':
+            bounds=[(0.6, 2.0), (-1, 0.5), (201, 610)]
+        elif self.name == 'art':
+            bounds=[(0.7, 2.999999), (-2, 0.5), (201, 952)]
+        else: 
+            bounds=[(0.6, 1.999999), (-1, 0.5), (201, 952)]
+
         if any(index[i] < bounds[i][0] or index[i] > bounds[i][1] for i in range(len(index))):
-            #print('out of bounds')
             return np.inf
         
         star = self.get_star_eep(index)
+        
+        if self.name == 'art':
+            if star['mass'] > 2.999999:
+                return np.inf
+        else: 
+             if star['mass'] > 1.999999:
+                return np.inf
+            
         sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
         if np.isnan(sq_err).any():
-            #print("Invalid value encountered")
             return np.inf
 
         if scale:
             sq_err /= np.array(scale)**2
 
         return np.average(sq_err)
-
+    
     def _meanpercenterror(self, index, star_dict):
         '''Mean Percent Error loss function for `fit_star`.
 
