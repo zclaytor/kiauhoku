@@ -630,7 +630,7 @@ class StarGridInterpolator(DFInterpolator):
             'meansquarederror' and 'meanpercenterror' are implemented.
             Defaults to 'measquarederror'.
 
-        scale: optional tuple of scale factors to be used in the
+        scale: optional dict of scale factors to be used in the
             meansquarederror computation. Defaults to None.
             If `scale` is specified with meanpercenterror loss, an
             error will be raised.
@@ -682,7 +682,7 @@ class StarGridInterpolator(DFInterpolator):
 
         *args: extra arguments to be passed to `StarGridInterpolator.fit_star`.
 
-        scale (tuple, None): scale factors by which to divide the values of 
+        scale (dict, None): scale factors by which to divide the values of 
             star_dict to put them to the same order of magnitude. This speeds
             up the fitting process in test cases and also improves accuracy.
 
@@ -715,7 +715,7 @@ class StarGridInterpolator(DFInterpolator):
         some_fit = False
         good_fit = False
         
-        closest_matches = self.find_closest(star_dict, n=n)
+        closest_matches = self.find_closest(star_dict, n=n, scale=scale)
             
         for idx in closest_matches.index:
             fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
@@ -768,7 +768,7 @@ class StarGridInterpolator(DFInterpolator):
 
         *args: extra arguments to be passed to `StarGridInterpolator.fit_star`.
 
-        scale (tuple, None): scale factors by which to divide the values of 
+        scale (dict, None): scale factors by which to divide the values of 
             star_dict to put them to the same order of magnitude. This speeds
             up the fitting process in test cases and also improves accuracy.
 
@@ -865,7 +865,7 @@ class StarGridInterpolator(DFInterpolator):
 
         star_dict (dict): dictionary of values for loss function computation.
 
-        scale (list-like, optional): Optionally scale the squared errors before
+        scale (dict, optional): Optionally scale the squared errors before
             taking the mean. This could be useful if, for example, luminosity is
             in solar units (~1) and age is in years (~10^9 years).
 
@@ -875,10 +875,10 @@ class StarGridInterpolator(DFInterpolator):
         '''
 
         star = self.get_star_eep(index)
-        sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
-
-        if scale:
-            sq_err /= np.array(scale)**2
+        if scale is None:
+            sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
+        else:
+            sq_err = np.array([((star[l] - star_dict[l])/scale[l])**2 for l in star_dict])
 
         return np.average(sq_err)
 
