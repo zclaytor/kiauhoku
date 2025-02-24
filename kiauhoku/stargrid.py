@@ -228,7 +228,7 @@ class StarGrid(pd.DataFrame):
         models (pandas.DataFrame): DataFrame containing the closest models.
         '''
         if method in ("leastsquares", "sumsquares", "meansquarederror", "mse"):
-            i_closest = self._meansquarederror(star_dict, **kw).nsmallest(n)
+            i_closest = self._meansquarederror(star_dict, **kw).sort_values().head(n).index
         models = self.loc[i_closest]
         return  models
 
@@ -585,7 +585,7 @@ class StarGridInterpolator(DFInterpolator):
 
         return sampler, output
         
-    def find_closest(self, star_dict, method="leastsquares"):
+    def find_closest(self, star_dict, n=10, method="leastsquares", **kw):
         '''
         Return the `n` closest models from the grid, where closeness is 
         determined using `method`
@@ -607,7 +607,7 @@ class StarGridInterpolator(DFInterpolator):
         models (pandas.DataFrame): DataFrame containing the closest models.
         '''
         grid = self.get_star_grid()
-        models = grid.find_closest(star_dict, method=method)
+        models = grid.find_closest(star_dict, n=n, method=method, **kw)
         return models
 
     def fit_star(self, star_dict, guess, *args,
@@ -662,6 +662,93 @@ class StarGridInterpolator(DFInterpolator):
         return result
 
     def gridsearch_fit(self, star_dict, *args, scale=None, tol=1e-6,
+                    verbose=True, n=10, **kwargs):
+        '''
+        Fit a star using `scipy.optimize.minimize` using the `n` closest
+        grid models as initial guesses.
+
+        There are three possible cases:
+        (1) A fit is found whose loss value is within `tol` tolerance. If this
+            happens, the search ceases and the fit is returned.
+        (2) `scipy.optimize.minimize` successfully identifies a fit, but it is
+            not within the user-specified tolerance. In this case, the entire
+            grid will be searched, and the best fit will be returned.
+        (3) `scipy.optimize.minimize` fails converge to a solution. In this
+            case, a `None` is returned with the most recent scipy output.
+
+        Parameters
+        ----------
+        star_dict (dict): dictionary containing label-value pairs to be fit.
+
+        *args: extra arguments to be passed to `StarGridInterpolator.fit_star`.
+
+        scale (tuple, None): scale factors by which to divide the values of 
+            star_dict to put them to the same order of magnitude. This speeds
+            up the fitting process in test cases and also improves accuracy.
+
+        tol (float, 1e-6): user-specified tolerance for the fit. The tolerance
+            represents the desired value of the loss. If a solution is found
+            within the tolerance, the gridsearch will cease. 
+
+        verbose (bool, True): whether to print fit messages. Recommended to
+            leave as `True` unless you're running a large list of stars AND
+            you know what you're doing.
+
+        n (int, 10): the number of closest models to use as initial guesses.
+
+        **kwargs: extra keyword arguments to be passed to `fit_star`.
+
+        Returns
+        -------
+        best_model (pandas Series): the stellar parameters for the best fit, if
+            a fit was achieved. Otherwise this will be `None`.
+
+        best_fit (`scipy.optimize.optimize.OptimizeResult`): the scipy 
+            optimizer result containing information pertaining to the fit.
+        '''
+
+        if verbose:
+            print(f'Fitting star with {self.name}...')        
+        
+        # Loop through indices searching for fit
+        best_loss = 1e10
+        some_fit = False
+        good_fit = False
+        
+        closest_matches = self.find_closest(star_dict, n=n)
+            
+        for idx in closest_matches.index:
+            fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
+            print(idx)
+            if fit.success:
+                some_fit = True
+                if fit.fun < best_loss:
+                    best_fit = fit
+                    best_loss = fit.fun
+                    if fit.fun <= tol:
+                        good_fit = True
+                        if verbose:
+                            print(f'{self.name}: success!')
+                        break
+
+        # Check to see how the fit did, print comments if desired.
+        if not some_fit:
+            if verbose:
+                print(f'*!*!*!* {self.name} fit failed! Returning last attempt.')
+            return None, fit
+        if verbose and not good_fit:
+            print(f'{self.name}: Fit not converged to within tolerance, but returning closest fit.')
+
+        # get the model, add the indices, and return
+        fit_idx = best_fit.x
+        best_model = self.get_star_eep(fit_idx)
+        for label, value in zip(self.index_range, fit_idx[:-1]):
+            best_model[label] = value
+        best_model['eep'] = fit_idx[-1]
+        
+        return best_model, best_fit
+
+    def gridsearch_fit_old(self, star_dict, *args, scale=None, tol=1e-6,
                     mass_step=0.1, met_step=0.2, alpha_step=0.2, eep_step=50, 
                     verbose=True, **kwargs):
         '''
@@ -736,19 +823,12 @@ class StarGridInterpolator(DFInterpolator):
 
         idx_list = pd.MultiIndex.from_product(idx_list)
         
-        
         # Loop through indices searching for fit
         best_loss = 1e10
         some_fit = False
         good_fit = False
-        
-        idx_new,full_grid = self.find_closest(star_dict)
-        idx_list_new = []
-        for i in range(0,len(idx_new)):
-            idxs = full_grid.iloc[i].name
-            idx_list_new.append(idxs)
-            
-        for idx in idx_list_new:
+                   
+        for idx in idx_list:
             fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
             print(idx)
             if fit.success:
@@ -761,17 +841,6 @@ class StarGridInterpolator(DFInterpolator):
                         if verbose:
                             print(f'{self.name}: success!')
                         break
-#        fit = self.fit_star(star_dict,guess=None,*args,scale=scale,**kwargs)
-#        if fit.success:
-#            some_fit = True
-#            if fit.fun < best_loss:
-#                best_fit = fit
-#                best_loss = fit.fun
-#                if fit.fun <= tol:
-#                    good_fit = True
-#                    if verbose:
-#                        print(f'{self.name}: success!')
-#                    #break
 
         # Check to see how the fit did, print comments if desired.
         if not some_fit:
@@ -789,7 +858,7 @@ class StarGridInterpolator(DFInterpolator):
         best_model['eep'] = fit_idx[-1]
         
         return best_model, best_fit
-
+    
     def _meansquarederror(self, index, star_dict, scale=False):
         '''Mean Squared Error loss function for `fit_star`.
 
