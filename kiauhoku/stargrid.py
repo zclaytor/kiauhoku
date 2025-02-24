@@ -719,7 +719,6 @@ class StarGridInterpolator(DFInterpolator):
             
         for idx in closest_matches.index:
             fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
-            print(idx)
             if fit.success:
                 some_fit = True
                 if fit.fun < best_loss:
