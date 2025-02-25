@@ -528,10 +528,17 @@ class StarGridInterpolator(DFInterpolator):
         '''
         Returns a pandas dataframe of the model grid for each mass & met combindation, indexed by EEP
         '''
-        idx = pd.MultiIndex.from_tuples([ixs for ixs in itertools.product(*self.index.levels)])
-        grid_df = pd.DataFrame(index=idx, columns=self.columns)
-        grid_df.loc[grid_df.index] = self.grid.reshape(-1, self.grid.shape[-1]) #number of columns in grid
+        # Create the multi-index from the outer product of all index coordinates
+        idx = list(itertools.product(*self.index.levels))
+        idx = pd.MultiIndex.from_tuples(idx, names=self.index.names)
+
+        # Initialize an empty DataFrame with the correct shape and MultiIndex
+        grid_df = pd.DataFrame(np.empty((len(idx), len(self.columns))), index=idx, columns=self.columns)
+
+        # Flatten the grid and assign the values in-place, without intermediate reshaping
+        grid_df.loc[:, :] = self.grid.reshape(-1, len(self.columns))
         grid_df = StarGrid(grid_df.dropna(), name=self.name, eep_params=self.eep_params)
+
         return grid_df
 
     def mcmc_star(self, log_prob_fn, args,
