@@ -13,7 +13,7 @@ Download the model grids from [Zenodo][zenodo].
 
 (C) [Zachary R. Claytor][zclaytor]  
 Space Telescope Science Institute
-2025 February 20
+2025 March 4
 
 Kīauhōkū  
 From Hawaiian:
