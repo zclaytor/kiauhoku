@@ -107,6 +107,7 @@ class StarGrid(pd.DataFrame):
         eep_params=None,
         eep_functions=None,
         metric_function=None,
+        eep_order=None,
         progress=True,
         nprocs=None,
         **kwargs
@@ -139,6 +140,9 @@ class StarGrid(pd.DataFrame):
             function(track, eep_params), where `track` is a single track.
             If no function is supplied, defaults to kiauhoku.eep._HRD_distance.
 
+        eep_order (list, None): ordered list containing `eep_functions` keys 
+        for which EEP functions to use.
+
         progress (bool, True): whether or not to display a progress bar.
 
         nprocs (int, None): how many parallel processes to use for MultiIndex
@@ -160,7 +164,7 @@ class StarGrid(pd.DataFrame):
         # tracks, convert to EEP basis, and recombine.
         if self.is_MultiIndex():
             partial_eep = functools.partial(_eep_pool_helper, self,
-                eep_params, eep_functions, metric_function)
+                eep_params, eep_functions, metric_function, eep_order)
 
             # create index iterator and pass to the mapping/progress function
             idx = self.index.droplevel(-1).drop_duplicates()
@@ -185,7 +189,7 @@ class StarGrid(pd.DataFrame):
         # Other case is if a single track is passed
         else:
             eep_frame = _eep_interpolate(
-                self, eep_params, eep_functions, metric_function
+                self, eep_params, eep_functions, metric_function, eep_order
             )
 
         # Cast DataFrame to StarGrid
@@ -1013,8 +1017,8 @@ def altrange(start, stop, step):
     else:
         return np.arange(start, stop, step)
 
-def _eep_pool_helper(tracks, eep_params, eep_functions, metric_function, i):
-    return _eep_interpolate(tracks.loc[i], eep_params, eep_functions, metric_function)  
+def _eep_pool_helper(tracks, eep_params, eep_functions, metric_function, eep_order, i):
+    return _eep_interpolate(tracks.loc[i], eep_params, eep_functions, metric_function, eep_order)  
 
 def load_interpolator(name=None, path=None):
     '''
@@ -1104,7 +1108,7 @@ def install_grid(script, kind='raw'):
     if kind == 'raw':
         eep_params = module.eep_params
         # Cache eep parameters
-        with open(os.path.join(path, 'eep_params.pkl'), 'wb') as f:
+        with open(os.path.join(path, f'{module.name}_eep_params.pkl'), 'wb') as f:
             pickle.dump(eep_params, f)
 
         print('Reading and combining grid files')
@@ -1112,7 +1116,7 @@ def install_grid(script, kind='raw'):
         grids = from_pandas(grids, name=module.name)
 
         # Save full grid to file
-        full_save_path = os.path.join(path, 'full_grid.pqt')
+        full_save_path = os.path.join(path, f'{module.name}_full_grid.pqt')
         print(f'Saving to {full_save_path}')
         grids.to_parquet(full_save_path)
 
@@ -1125,21 +1129,25 @@ def install_grid(script, kind='raw'):
             metric_function = module.metric_function
         except AttributeError:
             metric_function = None
+        try:
+            eep_order = module.eep_order
+        except AttributeError:
+            eep_order = None
 
-        eeps = grids.to_eep(eep_params, eep_functions, metric_function)
+        eeps = grids.to_eep(eep_params, eep_functions, metric_function, eep_order)
 
     elif kind == 'eep':
         eeps = module.setup()
         eeps = from_pandas(eeps, name=module.name)
 
     # Save EEP grid to file
-    eep_save_path = os.path.join(path, 'eep_grid.pqt')
+    eep_save_path = os.path.join(path, f'{module.name}_eep_grid.pqt')
     print(f'Saving to {eep_save_path}')
     eeps.to_parquet(eep_save_path)
 
     # Create and save interpolator to file
     interp = eeps.to_interpolator()
-    interp_save_path = os.path.join(path, 'interpolator.pkl')
+    interp_save_path = os.path.join(path, f'{module.name}_interpolator.pkl')
     print(f'Saving interpolator to {interp_save_path}')
     interp.to_pickle(path=interp_save_path)
 
@@ -1166,7 +1174,7 @@ def load_grid(name=None, path=None, kind='eep'):
                 eep_params = None
         else:
             eep_params = None
-        file_path = os.path.join(grids_path, name, f'{name}_{kind}.pqt')
+        file_path = os.path.join(grids_path, name, f'{name}_{kind}_grid.pqt')
     else:
         file_path = path
         

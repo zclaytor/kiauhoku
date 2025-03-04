@@ -18,6 +18,16 @@ You can define and supply your own EEP functions in a dictionary.
 EEP functions must have the call signature
     function(track, eep_params)
 where `track` is a single track.
+
+You can define the ordering of the EEP functions by passing an ordered list of 
+keys for `eep_functions` to `eep_order`. For example,
+    eep_order = ['prems','zams',...]
+This variable can also be used similar to using `skip`, where not including a 
+given key will result in that EEP function being left out. However, make sure 
+`eep_intervals` is the same length and order.
+
+NOTE: Currently, the Pre-MS and ZAMS need to be the first two EEPs in order 
+for `calc_HZ` to function properly.
 '''
 
 import numpy as np
@@ -25,7 +35,7 @@ import pandas as pd
 from scipy.interpolate import interp1d
 
 
-def _eep_interpolate(track, eep_params, eep_functions, metric_function=None):
+def _eep_interpolate(track, eep_params, eep_functions, metric_function=None, eep_order=None):
     '''
     Given a raw evolutionary track, returns a downsampled track based on
     Equivalent Evolutionary Phases (EEPs). The primary EEPs are defined below,
@@ -50,12 +60,15 @@ def _eep_interpolate(track, eep_params, eep_functions, metric_function=None):
     metric_function (callable, optional): function to compute EEP intervals.
         If none is specified, eep._HRD_distance will be used.
 
+    eep_order (list, optional): ordered list containing `eep_functions` keys 
+        for which EEP functions to use.
+
     Returns
     -------
     eep_track, a pandas DataFrame containing the EEP-based track.
     '''
 
-    i_eep = _locate_primary_eeps(track, eep_params, eep_functions)
+    i_eep = _locate_primary_eeps(track, eep_params, eep_functions, eep_order)
     num_intervals = len(i_eep) - 1
     # In some cases, the raw models do not hit the ZAMS. In these cases,
     # return None.
@@ -97,7 +110,7 @@ def _eep_interpolate(track, eep_params, eep_functions, metric_function=None):
 
     return eep_track
 
-def _locate_primary_eeps(track, eep_params, eep_functions=None):
+def _locate_primary_eeps(track, eep_params, eep_functions=None, eep_order=None):
     '''
     Given a track, returns a list containing indices of Equivalent
     Evolutionary Phases (EEPs)
@@ -108,7 +121,9 @@ def _locate_primary_eeps(track, eep_params, eep_functions=None):
     if eep_functions is None:
         eep_functions = default_eep_functions
     else:
-        eep_f.update(eep_functions)        
+        eep_f.update(eep_functions)
+        if eep_order is not None:
+            eep_f = {key: eep_f[key] for key in eep_order}
 
     # get indices of EEPs
     i_eep = []
