@@ -12,7 +12,7 @@ If you find this package useful, please cite [Claytor et al. (2020)][gyro paper]
 Download the model grids from [Zenodo][zenodo].
 
 (C) [Zachary R. Claytor][zclaytor]  
-Space Telescope Science Institute
+Space Telescope Science Institute  
 2025 March 5
 
 Kīauhōkū  
