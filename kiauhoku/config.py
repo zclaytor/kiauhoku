@@ -16,7 +16,19 @@ import os
 from socket import gethostname
 
 
-grids_url = "https://zenodo.org/api/records/4287717"
+grids_url_base = "https://zenodo.org/api/records"
+grids_url = os.path.join(grids_url_base, "4287717")
+
+grids_version_url = { # hard coding this until I find a better solution
+    "2.0": "6041150",
+    "2.0.0": "6041150",
+    "2.0.1": "6597404",
+    "2.0.3": "10975758",
+    "2.1.0": "11264222",
+    "2.1.2": "14908017",
+}
+grids_version_url = {
+    key: os.path.join(grids_url_base, grids_version_url[key]) for key in grids_version_url}
 
 
 if "ufhpc" in gethostname():

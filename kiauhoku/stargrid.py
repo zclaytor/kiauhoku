@@ -10,6 +10,8 @@ from importlib import import_module
 import pickle
 import functools
 import tarfile
+import itertools
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -22,9 +24,9 @@ import emcee
 from .utils.eep import _eep_interpolate
 from .utils.interp import DFInterpolator
 from .utils.progress_bar import parallel_progbar
-from .config import grids_path, grids_url
+from .config import grids_path, grids_url, grids_url_base, grids_version_url
 
-#:)
+
 class StarGrid(pd.DataFrame):
     '''
     StarGrid is designed to store and interact with stellar evolution tracks.
@@ -105,6 +107,7 @@ class StarGrid(pd.DataFrame):
         eep_params=None,
         eep_functions=None,
         metric_function=None,
+        eep_order=None,
         progress=True,
         nprocs=None,
         **kwargs
@@ -137,6 +140,9 @@ class StarGrid(pd.DataFrame):
             function(track, eep_params), where `track` is a single track.
             If no function is supplied, defaults to kiauhoku.eep._HRD_distance.
 
+        eep_order (list, None): ordered list containing `eep_functions` keys 
+        for which EEP functions to use.
+
         progress (bool, True): whether or not to display a progress bar.
 
         nprocs (int, None): how many parallel processes to use for MultiIndex
@@ -158,7 +164,7 @@ class StarGrid(pd.DataFrame):
         # tracks, convert to EEP basis, and recombine.
         if self.is_MultiIndex():
             partial_eep = functools.partial(_eep_pool_helper, self,
-                eep_params, eep_functions, metric_function)
+                eep_params, eep_functions, metric_function, eep_order)
 
             # create index iterator and pass to the mapping/progress function
             idx = self.index.droplevel(-1).drop_duplicates()
@@ -183,7 +189,7 @@ class StarGrid(pd.DataFrame):
         # Other case is if a single track is passed
         else:
             eep_frame = _eep_interpolate(
-                self, eep_params, eep_functions, metric_function
+                self, eep_params, eep_functions, metric_function, eep_order
             )
 
         # Cast DataFrame to StarGrid
@@ -208,7 +214,58 @@ class StarGrid(pd.DataFrame):
         eeps = np.arange(len(ints)) + np.cumsum(ints)
         
         return eeps
+    
+    def find_closest(self, star_dict, n=10, method="mse", **kw):
+        '''
+        Return the `n` closest models from the grid, where closeness is 
+        determined using `method`
 
+        Parameters
+        ----------
+        star_dict (dict): dictionary containing label: value pairs.
+
+        n (int, 10): the number of models to return.
+
+        method (str, "mse"): the method by which closeness is measured.
+
+        **kw: keyword arguments to be passed to the chosen cost `method`.
+
+        Returns
+        -------
+        models (pandas.DataFrame): DataFrame containing the closest models.
+        '''
+        if method in ("leastsquares", "sumsquares", "meansquarederror", "mse"):
+            i_closest = self._meansquarederror(star_dict, **kw).sort_values().head(n).index
+        models = self.loc[i_closest]
+        return  models
+
+    def _meansquarederror(self, star_dict, scale=None):
+        '''
+        Computes the mean squared error between the given data and the grid models.
+
+        Parameters
+        ----------
+        star_dict (dict): dictionary containing label: value pairs
+
+        scale (dict, None): Optional values by which to scale the squared errors
+            before taking the mean. This could be useful if, for example, 
+            luminosity is in solar units (~1) and age is in years (~10^9 years).
+
+        Returns
+        -------
+        mse (pandas.DataFrame): the mean squared error for each grid model.
+
+        NOTE: The actual value returned is the sum of the squares of the error,
+        not the mean. SSE and MSE are identical up to a multiplicative constant,
+        so as long as the rank ordered values are used, it shouldn't matter.
+        '''
+        if scale is None:
+            error = sum([(star_dict[l] - self[l])**2 for l in star_dict])
+        else:
+            error = sum([((star_dict[l] - self[l])/scale[l])**2 for l in star_dict])
+        return error
+
+    
     def get_eep_track_lengths(self):
         '''
         This is mainly a convenience function to be used in the script
@@ -227,8 +284,68 @@ class StarGrid(pd.DataFrame):
         idx = self.index.droplevel('eep').drop_duplicates()
         lengths = [len(self.loc[i]) for i in idx]
         lengths = pd.DataFrame(lengths, index=idx)
+        lengths.columns = ["length"]
         return lengths
+    
 
+    def plot_eep_track_lengths(self, ax=None, xlabel='initial_mass', ylabel='initial_met', **kw):
+        '''
+        Create a grid plot colored by the length of the track at each grid point.
+
+        Parameters
+        ----------
+        ax (`plt.Axes` object, None): the Axes on which to make the plot.
+
+        xlabel (str, 'initial_mass'): the name of the level to use on the x-axis.
+
+        ylabel (str, 'initial_met'): the name of the level to use on the y-axis.
+
+        **kw: keyword arguments to be passed to `plt.pcolormesh`.
+
+        Returns
+        -------
+        im (`QuadMesh`): the mappable for the color bar.
+
+        fig (`Figure`): the parent Figure object.
+
+        ax (`Axes` or `AxesSubplot`): the `Axes` on which the plot is drawn.
+        '''
+
+        # measure lengths, get x and y axis values
+        lengths = self.get_eep_track_lengths()
+        xvals = lengths.index.get_level_values(xlabel).drop_duplicates().sort_values()
+        yvals = lengths.index.get_level_values(ylabel).drop_duplicates().sort_values()
+
+        # if the grid has any holes, put a value of 0 for the length
+        idx = pd.MultiIndex.from_product([xvals, yvals])
+        missing = idx.difference(lengths.index)
+        missing = pd.DataFrame(np.zeros(len(missing), dtype=int), index=missing, columns=["length"])
+        lengths = pd.concat([lengths, missing]).sort_index()
+
+        # reshape the lengths to a 2D grid
+        lvals = lengths.values.reshape(len(xvals), len(yvals)).T
+
+        # make plot
+        if ax is None:
+            from matplotlib.pyplot import subplots
+            fig, ax = subplots()
+        else:
+            fig = ax.get_figure()
+
+        # if no edgecolor specified, default to 'k'
+        if 'edgecolors' in kw:
+            ecs = kw.pop('edgecolors')
+        else:
+            ecs = 'k'
+
+        im = ax.pcolormesh(xvals, yvals, lvals, edgecolors=ecs, **kw)
+        ax.set(xticks=xvals, yticks=yvals, xlabel=xlabel, ylabel=ylabel,
+            xticklabels=[f"{x:g}" for x in xvals])
+
+        fig.colorbar(im, ticks=list(set(lvals.flatten())), label="Number of EEPs")
+
+        return im, fig, ax
+    
 class StarGridInterpolator(DFInterpolator):
     '''
     Stellar model grid interpolator. Built on the DataFrame Interpolator
@@ -325,16 +442,20 @@ class StarGridInterpolator(DFInterpolator):
         '''
         if not isinstance(index, tuple):
             index = tuple(index)
-            
-        if index in self.index:
-            star_values = self._get_star_eep(index)
-        else:
-            star_values = self(index)
 
-        if len(np.shape(index)) == 1:
+        # Commenting this out 2024-12-20 because it interferes with 6D interpolation... fix later
+        # if index in self.index:
+        #     star_values = self._get_star_eep(index)
+        # else:
+        #     star_values = self(index)
+        star_values = self(index)
+
+        if len(star_values.shape) == 1:
             star = pd.Series(star_values, index=self.columns)
         else:
             star = pd.DataFrame(star_values, columns=self.columns)
+            #star.index = pd.MultiIndex.from_tuples(tuple(zip(*index)), names=self.index.names)
+            # this is nice, but fails if index is heterogeneous.
 
         return star
 
@@ -406,6 +527,23 @@ class StarGridInterpolator(DFInterpolator):
         track = StarGrid(star_values, columns=self.columns,
                          name=self.name, eep_params=self.eep_params)
         return track
+    
+    def get_star_grid(self):
+        '''
+        Returns a pandas dataframe of the model grid for each mass & met combindation, indexed by EEP
+        '''
+        # Create the multi-index from the outer product of all index coordinates
+        idx = list(itertools.product(*self.index.levels))
+        idx = pd.MultiIndex.from_tuples(idx, names=self.index.names)
+
+        # Initialize an empty DataFrame with the correct shape and MultiIndex
+        grid_df = pd.DataFrame(np.empty((len(idx), len(self.columns))), index=idx, columns=self.columns)
+
+        # Flatten the grid and assign the values in-place, without intermediate reshaping
+        grid_df.loc[:, :] = self.grid.reshape(-1, len(self.columns))
+        grid_df = StarGrid(grid_df.dropna(), name=self.name, eep_params=self.eep_params)
+
+        return grid_df
 
     def mcmc_star(self, log_prob_fn, args,
         pos0=None, initial_guess=None, guess_width=None,
@@ -524,6 +662,31 @@ class StarGridInterpolator(DFInterpolator):
                 )
 
         return sampler, output
+        
+    def find_closest(self, star_dict, n=50, method="leastsquares", **kw):
+        '''
+        Return the `n` closest models from the grid, where closeness is 
+        determined using `method`
+
+        This method essentially wraps `kiauhoku.StarGrid.find_closest`.
+
+        Parameters
+        ----------
+        star_dict (dict): dictionary containing label: value pairs.
+
+        n (int, 50): the number of models to return.
+
+        method (str, "mse"): the method by which closeness is measured.
+
+        **kw: keyword arguments to be passed to the chosen cost `method`.
+
+        Returns
+        -------
+        models (pandas.DataFrame): DataFrame containing the closest models.
+        '''
+        grid = self.get_star_grid()
+        models = grid.find_closest(star_dict, n=n, method=method, **kw)
+        return models
 
     def fit_star(self, star_dict, guess, *args,
                  loss='meansquarederror', scale=None, **kwargs
@@ -545,7 +708,7 @@ class StarGridInterpolator(DFInterpolator):
             'meansquarederror' and 'meanpercenterror' are implemented.
             Defaults to 'measquarederror'.
 
-        scale: optional tuple of scale factors to be used in the
+        scale: optional dict of scale factors to be used in the
             meansquarederror computation. Defaults to None.
             If `scale` is specified with meanpercenterror loss, an
             error will be raised.
@@ -570,12 +733,96 @@ class StarGridInterpolator(DFInterpolator):
             args = (star_dict, scale, *args)
         else:
             args = (star_dict, *args)
-
+        
+       
         result = minimize(loss_function, guess, args=args, method='Nelder-Mead', **kwargs)
 
         return result
 
     def gridsearch_fit(self, star_dict, *args, scale=None, tol=1e-6,
+                    verbose=True, **kwargs):
+        '''
+        Fit a star using `scipy.optimize.minimize` using the `n` closest
+        grid models as initial guesses.
+
+        There are three possible cases:
+        (1) A fit is found whose loss value is within `tol` tolerance. If this
+            happens, the search ceases and the fit is returned.
+        (2) `scipy.optimize.minimize` successfully identifies a fit, but it is
+            not within the user-specified tolerance. In this case, the entire
+            grid will be searched, and the best fit will be returned.
+        (3) `scipy.optimize.minimize` fails converge to a solution. In this
+            case, a `None` is returned with the most recent scipy output.
+
+        Parameters
+        ----------
+        star_dict (dict): dictionary containing label-value pairs to be fit.
+
+        *args: extra arguments to be passed to `StarGridInterpolator.fit_star`.
+
+        scale (dict, None): scale factors by which to divide the values of 
+            star_dict to put them to the same order of magnitude. This speeds
+            up the fitting process in test cases and also improves accuracy.
+
+        tol (float, 1e-6): user-specified tolerance for the fit. The tolerance
+            represents the desired value of the loss. If a solution is found
+            within the tolerance, the gridsearch will cease. 
+
+        verbose (bool, True): whether to print fit messages. Recommended to
+            leave as `True` unless you're running a large list of stars AND
+            you know what you're doing.
+
+        **kwargs: extra keyword arguments to be passed to `fit_star`.
+
+        Returns
+        -------
+        best_model (pandas Series): the stellar parameters for the best fit, if
+            a fit was achieved. Otherwise this will be `None`.
+
+        best_fit (`scipy.optimize.optimize.OptimizeResult`): the scipy 
+            optimizer result containing information pertaining to the fit.
+        '''
+
+        if verbose:
+            print(f'Fitting star with {self.name}...')        
+        
+        # Loop through indices searching for fit
+        best_loss = 1e10
+        some_fit = False
+        good_fit = False
+        
+        closest_matches = self.find_closest(star_dict, scale=scale)
+            
+        for idx in closest_matches.index:
+            fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
+            if fit.success:
+                some_fit = True
+                if fit.fun < best_loss:
+                    best_fit = fit
+                    best_loss = fit.fun
+                    if fit.fun <= tol:
+                        good_fit = True
+                        if verbose:
+                            print(f'{self.name}: success!')
+                        break
+
+        # Check to see how the fit did, print comments if desired.
+        if not some_fit:
+            if verbose:
+                print(f'*!*!*!* {self.name} fit failed! Returning last attempt.')
+            return None, fit
+        if verbose and not good_fit:
+            print(f'{self.name}: Fit not converged to within tolerance, but returning closest fit.')
+
+        # get the model, add the indices, and return
+        fit_idx = best_fit.x
+        best_model = self.get_star_eep(fit_idx)
+        for label, value in zip(self.index_names, fit_idx):
+            best_model[label] = value
+        
+        return best_model, best_fit
+
+    def gridsearch_fit_old(self, star_dict, *args, scale=None, tol=1e-6,
                     mass_step=0.1, met_step=0.2, alpha_step=0.2, eep_step=50, 
                     verbose=True, **kwargs):
         '''
@@ -597,7 +844,7 @@ class StarGridInterpolator(DFInterpolator):
 
         *args: extra arguments to be passed to `StarGridInterpolator.fit_star`.
 
-        scale (tuple, None): scale factors by which to divide the values of 
+        scale (dict, None): scale factors by which to divide the values of 
             star_dict to put them to the same order of magnitude. This speeds
             up the fitting process in test cases and also improves accuracy.
 
@@ -645,17 +892,19 @@ class StarGridInterpolator(DFInterpolator):
         if 'initial_alpha' in idxrange:
             alpha_list = altrange(*idxrange['initial_alpha'], alpha_step)
             idx_list.append(alpha_list)
-        eep_list = np.arange(252, 606, eep_step)
+        eep_list = np.arange(201, 656, eep_step)
         idx_list.append(eep_list)
 
         idx_list = pd.MultiIndex.from_product(idx_list)
-
+        
         # Loop through indices searching for fit
         best_loss = 1e10
         some_fit = False
         good_fit = False
+                   
         for idx in idx_list:
             fit = self.fit_star(star_dict, idx, *args, scale=scale, **kwargs)
+            print(idx)
             if fit.success:
                 some_fit = True
                 if fit.fun < best_loss:
@@ -678,12 +927,11 @@ class StarGridInterpolator(DFInterpolator):
         # get the model, add the indices, and return
         fit_idx = best_fit.x
         best_model = self.get_star_eep(fit_idx)
-        for label, value in zip(idxrange.index, fit_idx[:-1]):
+        for label, value in zip(self.index_names, fit_idx):
             best_model[label] = value
-        best_model['eep'] = fit_idx[-1]
         
         return best_model, best_fit
-
+    
     def _meansquarederror(self, index, star_dict, scale=False):
         '''Mean Squared Error loss function for `fit_star`.
 
@@ -693,7 +941,7 @@ class StarGridInterpolator(DFInterpolator):
 
         star_dict (dict): dictionary of values for loss function computation.
 
-        scale (list-like, optional): Optionally scale the squared errors before
+        scale (dict, optional): Optionally scale the squared errors before
             taking the mean. This could be useful if, for example, luminosity is
             in solar units (~1) and age is in years (~10^9 years).
 
@@ -703,10 +951,10 @@ class StarGridInterpolator(DFInterpolator):
         '''
 
         star = self.get_star_eep(index)
-        sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
-
-        if scale:
-            sq_err /= np.array(scale)**2
+        if scale is None:
+            sq_err = np.array([(star[l] - star_dict[l])**2 for l in star_dict])
+        else:
+            sq_err = np.array([((star[l] - star_dict[l])/scale[l])**2 for l in star_dict])
 
         return np.average(sq_err)
 
@@ -769,8 +1017,8 @@ def altrange(start, stop, step):
     else:
         return np.arange(start, stop, step)
 
-def _eep_pool_helper(tracks, eep_params, eep_functions, metric_function, i):
-    return _eep_interpolate(tracks.loc[i], eep_params, eep_functions, metric_function)  
+def _eep_pool_helper(tracks, eep_params, eep_functions, metric_function, eep_order, i):
+    return _eep_interpolate(tracks.loc[i], eep_params, eep_functions, metric_function, eep_order)  
 
 def load_interpolator(name=None, path=None):
     '''
@@ -860,7 +1108,7 @@ def install_grid(script, kind='raw'):
     if kind == 'raw':
         eep_params = module.eep_params
         # Cache eep parameters
-        with open(os.path.join(path, 'eep_params.pkl'), 'wb') as f:
+        with open(os.path.join(path, f'{module.name}_eep_params.pkl'), 'wb') as f:
             pickle.dump(eep_params, f)
 
         print('Reading and combining grid files')
@@ -868,7 +1116,7 @@ def install_grid(script, kind='raw'):
         grids = from_pandas(grids, name=module.name)
 
         # Save full grid to file
-        full_save_path = os.path.join(path, 'full_grid.pqt')
+        full_save_path = os.path.join(path, f'{module.name}_full.pqt')
         print(f'Saving to {full_save_path}')
         grids.to_parquet(full_save_path)
 
@@ -881,21 +1129,25 @@ def install_grid(script, kind='raw'):
             metric_function = module.metric_function
         except AttributeError:
             metric_function = None
+        try:
+            eep_order = module.eep_order
+        except AttributeError:
+            eep_order = None
 
-        eeps = grids.to_eep(eep_params, eep_functions, metric_function)
+        eeps = grids.to_eep(eep_params, eep_functions, metric_function, eep_order)
 
     elif kind == 'eep':
         eeps = module.setup()
         eeps = from_pandas(eeps, name=module.name)
 
     # Save EEP grid to file
-    eep_save_path = os.path.join(path, 'eep_grid.pqt')
+    eep_save_path = os.path.join(path, f'{module.name}_eep.pqt')
     print(f'Saving to {eep_save_path}')
     eeps.to_parquet(eep_save_path)
 
     # Create and save interpolator to file
     interp = eeps.to_interpolator()
-    interp_save_path = os.path.join(path, 'interpolator.pkl')
+    interp_save_path = os.path.join(path, f'{module.name}_interpolator.pkl')
     print(f'Saving interpolator to {interp_save_path}')
     interp.to_pickle(path=interp_save_path)
 
@@ -943,7 +1195,12 @@ def load_eep_params(name):
 
     return eep_params
 
-def download(name, kind="eep", create_interpolator=True):
+def download(
+        name,
+        version="latest",
+        record_no=None,
+        kind="eep", 
+        create_interpolator=True):
     '''
     Downloads model grid data from Zenodo. By default, pulls from the most
     recent version. A future version of kiauhoku will let users specify
@@ -953,6 +1210,12 @@ def download(name, kind="eep", create_interpolator=True):
     ----------
     name (str): the name of the grid to be downloaded. Must be one of
         'dartmouth', 'garstec', 'mist', 'yrec', 'fastlaunch', 'slowlaunch', 'rocrit'.
+
+    version (str): the version string for the grids to be downloaded.
+        Defaults to 'latest'. Specify either `version` or `record_no`.
+
+    record_no (str or int): Zenodo record number for the grids to be downloaded.
+        `None` by default. Specify either `version` or `record_no`.
 
     kind (str, 'eep'): the kind of files to be downloaded. Can be one of
         'eep', 'full', or 'src', but default is 'eep'.
@@ -968,8 +1231,20 @@ def download(name, kind="eep", create_interpolator=True):
     if not os.path.exists(grids_path):
         os.makedirs(grids_path)
 
-    # check permanent record locator to get latest version
-    r = requests.get(grids_url)
+    # determine url
+    if record_no is not None:
+        url = os.path.join(grids_url_base, f"{record_no}")
+    elif version == "latest":
+        url = grids_url
+    else:
+        try:
+            url = grids_version_url[version]
+        except KeyError:
+            raise KeyError(f"Version {version} not registered. " 
+                           f"Available versions: {list(grids_version_url.keys())}")
+
+    # check record locator to get latest version
+    r = requests.get(url)
     if r.ok:
         record_id = r.json()["id"]
         fname = f"{name}_{kind}.tar.gz"
@@ -978,13 +1253,12 @@ def download(name, kind="eep", create_interpolator=True):
         # download and extract files
         r = requests.get(my_url, stream=True)
         if r.ok:
-            block_size = 1024
-            total_size = int(r.headers.get("Content-Length", 0))/block_size
+            file_size = int(r.headers.get("Content-Length", 0))
 
             tgz_file = os.path.join(grids_path, fname)
-            with open(tgz_file, "wb") as f:
-                for data in tqdm(r.iter_content(block_size), total=total_size, unit="B", unit_scale=True):
-                    f.write(data)
+            with tqdm.wrapattr(r.raw, "read", total=file_size) as r_raw:
+                with open(tgz_file, "wb") as f:
+                    shutil.copyfileobj(r_raw, f)
 
             with tarfile.open(tgz_file) as g:
                 # safe_extract added to protect against malicious attacks made possible by a Python bug

@@ -12,9 +12,8 @@ If you find this package useful, please cite [Claytor et al. (2020)][gyro paper]
 Download the model grids from [Zenodo][zenodo].
 
 (C) [Zachary R. Claytor][zclaytor]  
-Department of Astronomy  
-University of Florida  
-2024 March 25
+Space Telescope Science Institute
+2025 March 5
 
 Kīauhōkū  
 From Hawaiian:
