@@ -393,12 +393,12 @@ def find_indices_6d(x0, x1, x2, x3, x4, x5, ii0, ii1, ii2, ii3, ii4, ii5):
 @nb.jit(nopython=True)
 def interp_value_2d(x0, x1, grid, icols, ii0, ii1):
     if x0 != x0 or x1 != x1:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
 
     indices, norm_distances, out_of_bounds = find_indices_2d(x0, x1, ii0, ii1)
 
     if out_of_bounds:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
     # The following should be equivalent to
     #  edges = np.array(list(itertools.product(*[[i, i+1] for i in indices])))
 
@@ -437,12 +437,12 @@ def interp_value_2d(x0, x1, grid, icols, ii0, ii1):
 @nb.jit(nopython=True)
 def interp_value_3d(x0, x1, x2, grid, icols, ii0, ii1, ii2):
     if x0 != x0 or x1 != x1 or x2 != x2:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
 
     indices, norm_distances, out_of_bounds = find_indices_3d(x0, x1, x2, ii0, ii1, ii2)
 
     if out_of_bounds:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
     # The following should be equivalent to
     #  edges = np.array(list(itertools.product(*[[i, i+1] for i in indices])))
 
@@ -481,12 +481,12 @@ def interp_value_3d(x0, x1, x2, grid, icols, ii0, ii1, ii2):
 @nb.jit(nopython=True)
 def interp_value_4d(x0, x1, x2, x3, grid, icols, ii0, ii1, ii2, ii3):
     if x0 != x0 or x1 != x1 or x2 != x2 or x3 != x3:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
 
     indices, norm_distances, out_of_bounds = find_indices_4d(x0, x1, x2, x3, ii0, ii1, ii2, ii3)
 
     if out_of_bounds:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
 
     # The following should be equivalent to
     #  edges = np.array(list(itertools.product(*[[i, i+1] for i in indices])))
@@ -526,12 +526,12 @@ def interp_value_4d(x0, x1, x2, x3, grid, icols, ii0, ii1, ii2, ii3):
 @nb.jit(nopython=True)
 def interp_value_5d(x0, x1, x2, x3, x4, grid, icols, ii0, ii1, ii2, ii3, ii4):
     if x0 != x0 or x1 != x1 or x2 != x2 or x3 != x3 or x4 != x4:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
 
     indices, norm_distances, out_of_bounds = find_indices_5d(x0, x1, x2, x3, x4, ii0, ii1, ii2, ii3, ii4)
 
     if out_of_bounds:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
 
     # The following should be equivalent to
     #  edges = np.array(list(itertools.product(*[[i, i+1] for i in indices])))
@@ -571,12 +571,12 @@ def interp_value_5d(x0, x1, x2, x3, x4, grid, icols, ii0, ii1, ii2, ii3, ii4):
 @nb.jit(nopython=True)
 def interp_value_6d(x0, x1, x2, x3, x4, x5, grid, icols, ii0, ii1, ii2, ii3, ii4, ii5):
     if x0 != x0 or x1 != x1 or x2 != x2 or x3 != x3 or x4 != x4 or x5 != x5:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
 
     indices, norm_distances, out_of_bounds = find_indices_6d(x0, x1, x2, x3, x4, x5, ii0, ii1, ii2, ii3, ii4, ii5)
 
     if out_of_bounds:
-        return np.array([np.nan for i in icols])
+        return np.full(len(icols), np.nan, dtype=np.float64)
 
     # The following should be equivalent to
     #  edges = np.array(list(itertools.product(*[[i, i+1] for i in indices])))
