@@ -80,7 +80,7 @@ def find_indices(point, iis):
             indices[i] = ix
             dx = ii[ix + 1] - ii[ix]
             norm_distances[i] = (x - ii[ix]) / dx
-        out_of_bounds &= x < ii[0] or x > ii[n - 1]
+        out_of_bounds |= x < ii[0] or x > ii[n - 1]
 
     return indices, norm_distances, out_of_bounds
 
@@ -411,6 +411,7 @@ def interp_value_2d(x0, x1, grid, icols, ii0, ii1):
 
     n_values = len(icols)
     values = np.zeros(n_values, dtype=nb.float64)
+    total_weight = 0.0
 
     for j in range(n_edges):
         edge_indices = np.zeros(ndim, dtype=nb.uint32)
@@ -424,12 +425,23 @@ def interp_value_2d(x0, x1, grid, icols, ii0, ii1):
             else:
                 weight *= yi
 
-        for i_icol in range(n_values):
-            icol = icols[i_icol]
+        # Skip NaN corners: if this grid cell is NaN (track terminated here),
+        # exclude it and renormalize the remaining weights instead of
+        # propagating NaN into the result. -- Niall Miller
+        check_val = grid[(edge_indices[0], edge_indices[1], icols[0])]
+        if check_val == check_val:  # False only for NaN
+            for i_icol in range(n_values):
+                icol = icols[i_icol]
+                grid_indices = (edge_indices[0], edge_indices[1], icol)
+                values[i_icol] += grid[grid_indices] * weight
+            total_weight += weight
 
-            # Now, get the value; this is why general ND doesn't work
-            grid_indices = (edge_indices[0], edge_indices[1], icol)
-            values[i_icol] += grid[grid_indices] * weight
+    if total_weight > 0.0:
+        for i_icol in range(n_values):
+            values[i_icol] /= total_weight
+    else:
+        for i_icol in range(n_values):
+            values[i_icol] = np.nan
 
     return values
 
@@ -455,6 +467,7 @@ def interp_value_3d(x0, x1, x2, grid, icols, ii0, ii1, ii2):
 
     n_values = len(icols)
     values = np.zeros(n_values, dtype=nb.float64)
+    total_weight = 0.0
 
     for j in range(n_edges):
         edge_indices = np.zeros(ndim, dtype=nb.uint32)
@@ -468,12 +481,20 @@ def interp_value_3d(x0, x1, x2, grid, icols, ii0, ii1, ii2):
             else:
                 weight *= yi
 
-        for i_icol in range(n_values):
-            icol = icols[i_icol]
+        check_val = grid[(edge_indices[0], edge_indices[1], edge_indices[2], icols[0])]
+        if check_val == check_val:
+            for i_icol in range(n_values):
+                icol = icols[i_icol]
+                grid_indices = (edge_indices[0], edge_indices[1], edge_indices[2], icol)
+                values[i_icol] += grid[grid_indices] * weight
+            total_weight += weight
 
-            # Now, get the value; this is why general ND doesn't work
-            grid_indices = (edge_indices[0], edge_indices[1], edge_indices[2], icol)
-            values[i_icol] += grid[grid_indices] * weight
+    if total_weight > 0.0:
+        for i_icol in range(n_values):
+            values[i_icol] /= total_weight
+    else:
+        for i_icol in range(n_values):
+            values[i_icol] = np.nan
 
     return values
 
@@ -500,6 +521,7 @@ def interp_value_4d(x0, x1, x2, x3, grid, icols, ii0, ii1, ii2, ii3):
 
     n_values = len(icols)
     values = np.zeros(n_values, dtype=nb.float64)
+    total_weight = 0.0
 
     for j in range(n_edges):
         edge_indices = np.zeros(ndim, dtype=nb.uint32)
@@ -513,12 +535,20 @@ def interp_value_4d(x0, x1, x2, x3, grid, icols, ii0, ii1, ii2, ii3):
             else:
                 weight *= yi
 
-        for i_icol in range(n_values):
-            icol = icols[i_icol]
+        check_val = grid[(edge_indices[0], edge_indices[1], edge_indices[2], edge_indices[3], icols[0])]
+        if check_val == check_val:
+            for i_icol in range(n_values):
+                icol = icols[i_icol]
+                grid_indices = (edge_indices[0], edge_indices[1], edge_indices[2], edge_indices[3], icol)
+                values[i_icol] += grid[grid_indices] * weight
+            total_weight += weight
 
-            # Now, get the value; this is why general ND doesn't work
-            grid_indices = (edge_indices[0], edge_indices[1], edge_indices[2], edge_indices[3], icol)
-            values[i_icol] += grid[grid_indices] * weight
+    if total_weight > 0.0:
+        for i_icol in range(n_values):
+            values[i_icol] /= total_weight
+    else:
+        for i_icol in range(n_values):
+            values[i_icol] = np.nan
 
     return values
 
@@ -545,6 +575,7 @@ def interp_value_5d(x0, x1, x2, x3, x4, grid, icols, ii0, ii1, ii2, ii3, ii4):
 
     n_values = len(icols)
     values = np.zeros(n_values, dtype=nb.float64)
+    total_weight = 0.0
 
     for j in range(n_edges):
         edge_indices = np.zeros(ndim, dtype=nb.uint32)
@@ -558,12 +589,20 @@ def interp_value_5d(x0, x1, x2, x3, x4, grid, icols, ii0, ii1, ii2, ii3, ii4):
             else:
                 weight *= yi
 
-        for i_icol in range(n_values):
-            icol = icols[i_icol]
+        check_val = grid[(edge_indices[0], edge_indices[1], edge_indices[2], edge_indices[3], edge_indices[4], icols[0])]
+        if check_val == check_val:
+            for i_icol in range(n_values):
+                icol = icols[i_icol]
+                grid_indices = (edge_indices[0], edge_indices[1], edge_indices[2], edge_indices[3], edge_indices[4], icol)
+                values[i_icol] += grid[grid_indices] * weight
+            total_weight += weight
 
-            # Now, get the value; this is why general ND doesn't work
-            grid_indices = (edge_indices[0], edge_indices[1], edge_indices[2], edge_indices[3], edge_indices[4], icol)
-            values[i_icol] += grid[grid_indices] * weight
+    if total_weight > 0.0:
+        for i_icol in range(n_values):
+            values[i_icol] /= total_weight
+    else:
+        for i_icol in range(n_values):
+            values[i_icol] = np.nan
 
     return values
 
@@ -590,6 +629,7 @@ def interp_value_6d(x0, x1, x2, x3, x4, x5, grid, icols, ii0, ii1, ii2, ii3, ii4
 
     n_values = len(icols)
     values = np.zeros(n_values, dtype=nb.float64)
+    total_weight = 0.0
 
     for j in range(n_edges):
         edge_indices = np.zeros(ndim, dtype=nb.uint32)
@@ -603,12 +643,23 @@ def interp_value_6d(x0, x1, x2, x3, x4, x5, grid, icols, ii0, ii1, ii2, ii3, ii4
             else:
                 weight *= yi
 
-        for i_icol in range(n_values):
-            icol = icols[i_icol]
+        # Skip NaN corners: some tracks terminate before others, leaving NaN
+        # cells in the grid. Rather than propagating NaN into the result,
+        # exclude those corners and renormalize over the valid ones. -- Niall Miller
+        check_val = grid[(edge_indices[0], edge_indices[1], edge_indices[2], edge_indices[3], edge_indices[4], edge_indices[5], icols[0])]
+        if check_val == check_val:  # False only for NaN (IEEE 754)
+            for i_icol in range(n_values):
+                icol = icols[i_icol]
+                grid_indices = (edge_indices[0], edge_indices[1], edge_indices[2], edge_indices[3], edge_indices[4], edge_indices[5], icol)
+                values[i_icol] += grid[grid_indices] * weight
+            total_weight += weight
 
-            # Now, get the value; this is why general ND doesn't work
-            grid_indices = (edge_indices[0], edge_indices[1], edge_indices[2], edge_indices[3], edge_indices[4], edge_indices[5], icol)
-            values[i_icol] += grid[grid_indices] * weight
+    if total_weight > 0.0:
+        for i_icol in range(n_values):
+            values[i_icol] /= total_weight
+    else:
+        for i_icol in range(n_values):
+            values[i_icol] = np.nan
 
     return values
 
